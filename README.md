@@ -97,7 +97,7 @@ split-pdfs/
 
 ## Convert PDFs to CSV
 
-The PDF to CSV converter uses the Google Gemini API to extract structured data from the PDF pages.
+The PDF to CSV converter (`trreb_pdf_to_csv.py`) uses the Google Gemini API to extract structured data from the PDF pages.
 
 ### Features
 
@@ -106,11 +106,13 @@ The PDF to CSV converter uses the Google Gemini API to extract structured data f
 - Supports filtering by year and property type
 - Processes multiple years and property types in a single run
 - Detailed logging to track conversion progress
+- Maintains original data organization by year and property type
 
 ### Prerequisites
 
 - Python 3.8 or higher
 - Google Gemini API key (You can get one from [Google AI Studio](https://makersuite.google.com/))
+- TRREB PDF files organized in the `/split-pdfs/` directory
 
 ### Installation
 
@@ -140,6 +142,35 @@ Using the shell wrapper:
   - Available types: ALL_HOME_TYPES, CONDO_APT, CONDO_TOWNHOUSE, DETACHED, SEMI-DETACHED, TOWNHOUSE
 - `--api_key`: Google Gemini API key (required)
 - `--output_dir`: Output directory for CSV files (default: "./csv-outputs")
+- `--year`: (Legacy) Same as --years
+- `--property_type`: (Legacy) Same as --property_types
+
+### Examples
+
+Process all PDFs for a specific year:
+```bash
+python trreb_pdf_to_csv.py --years 2023 --api_key "your_api_key"
+```
+
+Process specific property type across all years:
+```bash
+python trreb_pdf_to_csv.py --property_types "DETACHED" --api_key "your_api_key"
+```
+
+Process specific property type for a specific year:
+```bash
+python trreb_pdf_to_csv.py --years 2022 --property_types "CONDO_APT" --api_key "your_api_key"
+```
+
+Process multiple property types for multiple years:
+```bash
+python trreb_pdf_to_csv.py --years "2022,2023,2024" --property_types "DETACHED,CONDO_APT,TOWNHOUSE" --api_key "your_api_key"
+```
+
+Process all condos (both apartment and townhouse) for the past 3 years:
+```bash
+python trreb_pdf_to_csv.py --years "2022,2023,2024" --property_types "CONDO_APT,CONDO_TOWNHOUSE" --api_key "your_api_key"
+```
 
 ### Output
 
@@ -155,7 +186,19 @@ csv-outputs/
 └── ...
 ```
 
-Each CSV file contains structured real estate data including region names, sales figures, average prices, median prices, listings information, days on market, and sales-to-list price ratios.
+Each CSV file contains structured real estate data including:
+- Region/Municipality names
+- Number of sales
+- Average prices
+- Median prices
+- New listings
+- Active listings
+- Average days on market
+- Average SP/LP ratio (if available)
+
+### Logging
+
+The script logs its progress to both the console and a file named `trreb_pdf_to_csv.log` in the current directory.
 
 ## Example Workflows
 
