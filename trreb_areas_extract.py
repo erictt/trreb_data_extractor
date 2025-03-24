@@ -8,12 +8,12 @@ This script:
 2. Renames "ROW" property type to "TOWNHOUSE" for consistency
 3. Uses numeric month format (01, 02, etc.) in filenames
 4. Works with all formats of TRREB reports (2016-2024)
-5. Supports extracting data for a specific year
+5. Supports extracting data for specific years (single or multiple)
 6. Fixes issues with Year-to-Date data incorrectly identified as ALL_HOME_TYPES
 7. Improves pattern matching for CONDO APT detection
 
 Usage:
-    python trreb_areas_extract.py [--year YYYY] [--include-ytd] [--debug]
+    python trreb_areas_extract.py [--years YYYY YYYY ...] [--debug]
 """
 
 import os
@@ -206,9 +206,8 @@ def debug_extract_text(pdf_path, page_num):
 def extract_and_save_summary_pages(
     pdf_dir="pdfs", 
     output_base_dir="split-pdfs", 
-    include_ytd=False, 
     debug=False,
-    specific_year=None
+    years=None
 ):
     """
     Extract ALL TRREB AREAS summary pages and save individually
@@ -216,9 +215,8 @@ def extract_and_save_summary_pages(
     Args:
         pdf_dir: Directory containing TRREB PDF files
         output_base_dir: Base directory for output files
-        include_ytd: Whether to include YEAR-TO-DATE pages (default: False)
         debug: Whether to enable extra debugging output
-        specific_year: Optional specific year to extract (default: None = all years)
+        years: Optional list of specific years to extract (default: None = all years)
     """
     # Get all PDF files
     pdf_files = [
@@ -230,22 +228,24 @@ def extract_and_save_summary_pages(
     # Sort PDFs by date
     pdf_files.sort(key=extract_date_from_filename)
 
-    # Filter by specific year if provided
-    if specific_year:
+    # Filter by specific years if provided
+    if years:
         filtered_pdf_files = []
         for pdf_path in pdf_files:
             date = extract_date_from_filename(pdf_path)
-            if date and date.year == specific_year:
+            if date and date.year in years:
                 filtered_pdf_files.append(pdf_path)
         
         pdf_files = filtered_pdf_files
         
         if not pdf_files:
-            logging.warning(f"No PDF files found for year {specific_year}")
-            print(f"No PDF files found for year {specific_year}")
+            years_str = ", ".join(str(y) for y in years)
+            logging.warning(f"No PDF files found for years: {years_str}")
+            print(f"No PDF files found for years: {years_str}")
             return 0, 0, 0, 0, set()
         
-        logging.info(f"Filtered to {len(pdf_files)} PDF files for year {specific_year}")
+        years_str = ", ".join(str(y) for y in years)
+        logging.info(f"Filtered to {len(pdf_files)} PDF files for years: {years_str}")
 
     # Track statistics
     total_pdfs = len(pdf_files)
@@ -310,8 +310,8 @@ def extract_and_save_summary_pages(
                         if not is_year_to_date:
                             property_by_date[date_key]["found"].add(property_type)
 
-                        # Skip year-to-date pages if not requested
-                        if is_year_to_date and not include_ytd:
+                        # Skip year-to-date pages
+                        if is_year_to_date:
                             logging.info(
                                 f"  Skipping YEAR-TO-DATE page {i + 1}: {page_title}"
                             )
@@ -373,19 +373,17 @@ def extract_and_save_summary_pages(
             )
 
     # Print summary
-    year_str = f" for {specific_year}" if specific_year else ""
+    years_str = f" for years: {', '.join(str(y) for y in years)}" if years else ""
     logging.info(
-        f"Completed processing {total_pdfs} PDFs{year_str} with {total_pages} total pages"
+        f"Completed processing {total_pdfs} PDFs{years_str} with {total_pages} total pages"
     )
     logging.info(f"Saved {saved_pages} summary pages to {output_base_dir}")
     if skipped_ytd > 0:
-        logging.info(
-            f"Skipped {skipped_ytd} YEAR-TO-DATE pages (include_ytd={include_ytd})"
-        )
+        logging.info(f"Skipped {skipped_ytd} YEAR-TO-DATE pages")
     if skipped_municipal > 0:
         logging.info(f"Skipped {skipped_municipal} municipal breakdown pages")
 
-    print(f"\nProperty Types Found{year_str} ({len(all_property_types)}):")
+    print(f"\nProperty Types Found{years_str} ({len(all_property_types)}):")
     for prop_type in sorted(all_property_types):
         print(f"  - {prop_type}")
 
@@ -408,15 +406,10 @@ def parse_arguments():
     )
     
     parser.add_argument(
-        "--year", 
-        type=int, 
-        help="Specific year to extract (e.g., 2020)"
-    )
-    
-    parser.add_argument(
-        "--include-ytd", 
-        action="store_true", 
-        help="Include YEAR-TO-DATE pages in the extraction"
+        "--years", 
+        type=int,
+        nargs="+",
+        help="Specific years to extract (e.g., 2020 2021 2022)"
     )
     
     parser.add_argument(
@@ -444,19 +437,18 @@ if __name__ == "__main__":
     # Parse command line arguments
     args = parse_arguments()
     
-    # Set to True if you want to include YEAR-TO-DATE pages
+    # Process PDFs and extract pages
     total_pdfs, total_pages, saved_pages, skipped_ytd, property_types = (
         extract_and_save_summary_pages(
             pdf_dir=args.pdf_dir,
             output_base_dir=args.output_dir,
-            include_ytd=args.include_ytd, 
             debug=args.debug,
-            specific_year=args.year
+            years=args.years
         )
     )
 
-    year_str = f" for {args.year}" if args.year else ""
-    print(f"\nSummary{year_str}:")
+    years_str = f" for years: {', '.join(str(y) for y in args.years)}" if args.years else ""
+    print(f"\nSummary{years_str}:")
     print(f"Processed {total_pdfs} PDF files with {total_pages} total pages")
     print(
         f"Extracted and saved {saved_pages} individual 'SUMMARY OF EXISTING HOME TRANSACTIONS' pages"
@@ -464,7 +456,7 @@ if __name__ == "__main__":
     print(f"Skipped {skipped_ytd} YEAR-TO-DATE pages")
     print(f"Found {len(property_types)} distinct property types")
     
-    if args.year:
-        print(f"Files are saved in {args.output_dir}/{args.year}/ with numeric month format (e.g., DETACHED_{args.year}_07.pdf)")
+    if args.years:
+        print(f"Files are saved in {args.output_dir}/<year>/ with numeric month format (e.g., DETACHED_<year>_07.pdf)")
     else:
         print(f"Files are saved in {args.output_dir}/<year>/ with numeric month format (e.g., DETACHED_2020_07.pdf)")
