@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Define paths
-BASE_DIR = Path("/Users/eric/workspace/mcp/trreb_data_extractor")
+BASE_DIR = Path("./")
 PDF_DIR = BASE_DIR / "pdfs"
 OUTPUT_DIR = BASE_DIR / "extracted_data"
 

@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=pd.errors.DtypeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Define paths
-BASE_DIR = Path("/Users/eric/workspace/mcp/trreb_data_extractor")
+BASE_DIR = Path("./")
 PDF_DIR = BASE_DIR / "extracted_data"
 ALL_HOMES_DIR = PDF_DIR / "all_home_types"
 DETACHED_DIR = PDF_DIR / "detached"
