@@ -29,20 +29,20 @@ The tool handles different TRREB report formats across years (pre-2020 and post-
 ### Setup
 
 1. Clone the repository:
-```bash
-git clone <repository-url>
-cd trreb_data_extractor
-```
+   ```bash
+   git clone <repository-url>
+   cd trreb_data_extractor
+   ```
 
 2. Run the setup script to create a virtual environment and install dependencies:
-```bash
-./setup.sh
-```
+   ```bash
+   ./setup.sh
+   ```
 
 3. Create a `.env` file with your API key (for processing reports from January 2020 onwards):
-```
-XAI_API_KEY=your_xai_api_key_here
-```
+   ```
+   XAI_API_KEY=your_xai_api_key_here
+   ```
 
 ## Usage
 
