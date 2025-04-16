@@ -12,8 +12,6 @@ import tabula
 import PyPDF2
 import re
 from pathlib import Path
-import numpy as np
-from datetime import datetime
 import warnings
 
 # Suppress annoying pandas warnings
@@ -38,46 +36,31 @@ def extract_date_from_pdf(pdf_path):
     """
     Extract the date (month and year) from the content of the PDF or filename.
     """
-    # First try to get date from filename (most reliable)
-    filename = os.path.basename(pdf_path)
-    filename_no_ext = os.path.splitext(filename)[0]
+    with open(pdf_path, "rb") as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        text = pdf_reader.pages[0].extract_text()
 
-    # Check if the filename is already a date format (YYYY-MM)
-    if re.match(r"\d{4}-\d{2}", filename_no_ext):
-        return filename_no_ext
-
-    # Try to extract date from PDF content as backup
-    try:
-        with open(pdf_path, "rb") as f:
-            pdf_reader = PyPDF2.PdfReader(f)
-            text = pdf_reader.pages[0].extract_text()
-
-            # Look for common date formats in the PDF
-            # Try to find month and year in the format "Month YYYY"
-            month_year_pattern = r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})"
-            match = re.search(month_year_pattern, text)
-            if match:
-                month, year = match.groups()
-                month_num = {
-                    "January": "01",
-                    "February": "02",
-                    "March": "03",
-                    "April": "04",
-                    "May": "05",
-                    "June": "06",
-                    "July": "07",
-                    "August": "08",
-                    "September": "09",
-                    "October": "10",
-                    "November": "11",
-                    "December": "12",
-                }[month]
-                return f"{year}-{month_num}"
-    except Exception as e:
-        print(f"Error extracting date from PDF {pdf_path}: {e}")
-
-    # Default to using the filename if we can't extract a date
-    return filename_no_ext
+        # Look for common date formats in the PDF
+        # Try to find month and year in the format "Month YYYY"
+        month_year_pattern = r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})"
+        match = re.search(month_year_pattern, text)
+        if match:
+            month, year = match.groups()
+            month_num = {
+                "January": "01",
+                "February": "02",
+                "March": "03",
+                "April": "04",
+                "May": "05",
+                "June": "06",
+                "July": "07",
+                "August": "08",
+                "September": "09",
+                "October": "10",
+                "November": "11",
+                "December": "12",
+            }[month]
+            return f"{year}-{month_num}"
 
 
 def identify_municipalities(df):
@@ -138,47 +121,6 @@ def clean_table(df, report_type):
     # Remove rows where all values are NaN
     df = df.dropna(how="all")
 
-    # Clean column names
-    df.columns = [
-        str(col).strip().replace("\n", " ").replace("\r", "") for col in df.columns
-    ]
-    df.columns = [re.sub(r"\s+", " ", col) for col in df.columns]
-
-    # Rename columns based on content for better standardization
-    rename_mapping = {}
-
-    # Try to identify column type by content
-    for col in df.columns:
-        col_str = str(col).lower()
-
-        # Common column name patterns
-        if "municipality" in col_str or col_str == "0" or col_str.strip() == "":
-            rename_mapping[col] = "Municipality"
-        elif any(x in col_str for x in ["sales", "# of sales", "number of sales"]):
-            rename_mapping[col] = "Sales"
-        elif "dollar volume" in col_str:
-            rename_mapping[col] = "Dollar Volume"
-        elif any(x in col_str for x in ["average price", "avg. price", "avg price"]):
-            rename_mapping[col] = "Average Price"
-        elif "median price" in col_str:
-            rename_mapping[col] = "Median Price"
-        elif "new listings" in col_str:
-            rename_mapping[col] = "New Listings"
-        elif "active listings" in col_str:
-            rename_mapping[col] = "Active Listings"
-        elif any(x in col_str for x in ["sp/lp", "avg. sp/lp"]):
-            rename_mapping[col] = "Avg. SP/LP"
-        elif any(x in col_str for x in ["dom", "avg. dom"]):
-            rename_mapping[col] = "Avg. DOM"
-        elif "snlr" in col_str:
-            rename_mapping[col] = "SNLR (Trend)"
-        elif "mos" in col_str and "inv" in col_str:
-            rename_mapping[col] = "Mos Inv (Trend)"
-
-    # Rename columns if mappings found
-    if rename_mapping:
-        df = df.rename(columns=rename_mapping)
-
     # For rows, try to identify if the first row is actually column headers
     if df.shape[0] > 0:
         first_row = df.iloc[0].astype(str)
@@ -197,12 +139,6 @@ def clean_table(df, report_type):
                 for col in df.columns
             ]
             df.columns = [re.sub(r"\s+", " ", col) for col in df.columns]
-
-    # Remove rows that don't contain municipality data
-    # First, check if we have a Municipality column
-    if "Municipality" in df.columns:
-        # Keep only rows where Municipality contains text (not just numbers or special chars)
-        df = df[df["Municipality"].str.contains("[A-Za-z]", na=False, regex=True)]
 
     # Remove any unwanted rows based on specific patterns
     unwanted_patterns = ["Source:", "Notes:", "Copyright", "© 20", "Market Watch"]
@@ -248,6 +184,29 @@ def clean_table(df, report_type):
             except:
                 pass
 
+    # Replace NaN in the first column header with 'Municipality'
+    if pd.isna(df.columns[0]) or df.columns[0] == "":
+        df.columns = ["Municipality"] + list(df.columns[1:])
+
+    # Remove empty trailing columns (columns where all values are NaN)
+    df = df.dropna(axis=1, how="all")
+
+    # Remove any rows that contain footnote markers
+    if df.shape[1] > 0 and "Municipality" in df.columns:
+        # Remove rows where Municipality is just a number
+        df = df[~df["Municipality"].astype(str).str.match(r"^\d+$", na=False)]
+        # Remove summary or footnote rows
+        footnote_patterns = ["SUMMARY OF", "Copyright", "Source:", "Notes:", "© 20"]
+        for pattern in footnote_patterns:
+            df = df[
+                ~df["Municipality"]
+                .astype(str)
+                .str.contains(pattern, na=False, case=False)
+            ]
+
+    # remove the last row with the first cell of number 3
+    df = df[~df.iloc[:, 0].astype(str).str.match(r"^\d+$", na=False)]
+
     return df
 
 
@@ -277,22 +236,6 @@ def extract_tabula_tables(pdf_path, report_type):
     except Exception as e:
         print(f"Error extracting tables with tabula: {e}")
 
-    # If we couldn't extract tables automatically, try with specific regions
-    # These are approximate regions where tables usually appear in TRREB reports
-    try:
-        if report_type == "all_home_types":
-            tables = tabula.read_pdf(pdf_path, pages="1", area=[150, 50, 750, 600])
-        else:  # detached
-            tables = tabula.read_pdf(pdf_path, pages="1", area=[150, 50, 750, 600])
-
-        if tables and not all(t.empty for t in tables):
-            largest_table = max(
-                tables, key=lambda t: t.shape[0] * t.shape[1] if not t.empty else 0
-            )
-            return largest_table
-    except Exception as e:
-        print(f"Error extracting tables with area hints: {e}")
-
     return None
 
 
@@ -304,13 +247,6 @@ def process_pdf(pdf_path, output_path, report_type):
     # Clean and standardize the table
     if df is not None and not df.empty:
         df = clean_table(df, report_type)
-
-    if df is not None and not df.empty:
-        # Add date information
-        date_str = extract_date_from_pdf(pdf_path)
-        df["Date"] = date_str
-
-        # Save to CSV
         df.to_csv(output_path, index=False)
         print(f"  ✓ Saved table to {output_path}")
         return True, df.shape
@@ -328,6 +264,8 @@ def process_all_pdfs():
     all_homes_files = sorted(
         [f for f in os.listdir(ALL_HOMES_DIR) if f.lower().endswith(".pdf")]
     )
+
+    all_homes_files = list(filter(lambda x: x < "2020-01", all_homes_files))
 
     print(f"\nProcessing {len(all_homes_files)} ALL HOME TYPES PDFs...")
     for pdf_file in all_homes_files:
@@ -353,6 +291,8 @@ def process_all_pdfs():
         [f for f in os.listdir(DETACHED_DIR) if f.lower().endswith(".pdf")]
     )
 
+    detached_files = list(filter(lambda x: x < "2020-01", detached_files))
+
     print(f"\nProcessing {len(detached_files)} DETACHED PDFs...")
     for pdf_file in detached_files:
         pdf_path = DETACHED_DIR / pdf_file
@@ -371,20 +311,6 @@ def process_all_pdfs():
                 "num_cols": shape[1],
             }
         )
-
-    # Create summary DataFrames and save as CSV
-    all_homes_df = pd.DataFrame(all_homes_results)
-    detached_df = pd.DataFrame(detached_results)
-
-    all_homes_summary_path = CSV_DIR / "all_home_types_extraction_summary.csv"
-    detached_summary_path = CSV_DIR / "detached_extraction_summary.csv"
-
-    all_homes_df.to_csv(all_homes_summary_path, index=False)
-    detached_df.to_csv(detached_summary_path, index=False)
-
-    print(f"\nExtraction complete!")
-    print(f"ALL HOME TYPES summary saved to {all_homes_summary_path}")
-    print(f"DETACHED summary saved to {detached_summary_path}")
 
     # Print statistics
     total_all_homes = len(all_homes_results)
