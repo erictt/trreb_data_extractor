@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trreb"
+version = "0.1.0"
+description = "Tool for extracting, processing, and analyzing Toronto Regional Real Estate Board (TRREB) market reports"
+readme = "README.md"
+authors = [
+    {name = "Eric", email = ""}  # Add your email if desired
+]
+license = {text = "MIT"}  # Update with your chosen license
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",  # Update based on your license
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "annotated-types",
+    "anyio",
+    "certifi",
+    "distro",
+    "h11",
+    "httpcore",
+    "httpx",
+    "idna",
+    "jiter",
+    "numpy",
+    "openai",
+    "pandas",
+    "pdftotext",
+    "pydantic",
+    "pydantic_core",
+    "PyMuPDF",
+    "PyPDF2",
+    "python-dateutil",
+    "python-dotenv",
+    "pytz",
+    "six",
+    "sniffio",
+    "tabula",
+    "tabula-py",
+    "tqdm",
+    "typing-inspection",
+    "typing_extensions",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.1.0",
+    "isort>=5.10.1",
+    "flake8>=4.0.1",
+    "mypy>=0.931",
+]
+ml = [
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.2",
+]
+
+[project.scripts]
+trreb-download = "trreb.cli.commands:download"
+trreb-extract-pages = "trreb.cli.commands:extract_pages"
+trreb-process = "trreb.cli.commands:process"
+trreb-run-pipeline = "trreb.cli.commands:run_pipeline"
+
+[tool.setuptools]
+packages = ["trreb"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

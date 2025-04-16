@@ -24,13 +24,38 @@ source .venv/bin/activate
 # Upgrade pip
 pip install --upgrade pip
 
-# Install dependencies
-echo "Installing dependencies..."
-pip install -r requirements.txt
+# Install the package in development mode
+echo "Installing package in development mode..."
+pip install -e .
 
-# Make scripts executable
-chmod +x extract_tables_enhanced.py
-chmod +x run_extraction.sh
+# Create required directories
+echo "Creating data directories..."
+mkdir -p data/pdfs
+mkdir -p data/extracted/all_home_types
+mkdir -p data/extracted/detached
+mkdir -p data/processed/all_home_types
+mkdir -p data/processed/detached
+mkdir -p data/economic
+
+# Install additional development dependencies
+echo "Installing development dependencies..."
+pip install pytest black flake8 isort mypy
 
 echo ""
-echo "Setup complete! Run './run_extraction.sh' to start the extraction process."
+echo "Setup complete! Activate the virtual environment with:"
+echo "    source .venv/bin/activate"
+echo ""
+echo "Then run the full pipeline with:"
+echo "    python scripts/run_pipeline.py"
+echo ""
+echo "Or use individual commands:"
+echo "    python -m trreb.cli.commands download"
+echo "    python -m trreb.cli.commands extract-pages"
+echo "    python -m trreb.cli.commands process --type all_home_types"
+echo ""
+echo "Alternatively, use make commands if you have make installed:"
+echo "    make pipeline    # Run full pipeline"
+echo "    make download    # Download PDFs only"
+echo "    make extract     # Extract pages only"
+echo "    make process     # Process CSVs only"
+echo "    make enrich      # Enrich with economic data"
