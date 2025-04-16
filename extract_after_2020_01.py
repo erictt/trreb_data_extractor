@@ -30,53 +30,97 @@ def extract_page_text(pdf_path):
     return doc[0]
 
 
-def generate_prompt(text, source_name):
+def generate_prompt(text, source_name, property_type):
     if "2020-01" <= source_name <= "2022-04":
-        return (
-            """
-    Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the <DATA> section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s January 2020 report. The CSV must include the following columns: Region, # of Sales, Dollar Volume, Average Price, Median Price, New Listings, SNLR (Trend), Active Listings, Mos Inv (Trend), Avg. SP/LP, Avg. LDOM, Avg. PDOM. Adhere to the following formatting rules:
+        if property_type == "all_home_types":
+            return (
+                """
+        Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the <DATA> section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s January 2020 report. The CSV must include the following columns: Region, # of Sales, Dollar Volume, Average Price, Median Price, New Listings, SNLR (Trend), Active Listings, Mos Inv (Trend), Avg. SP/LP, Avg. LDOM, Avg. PDOM. Adhere to the following formatting rules:
 
-    1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
-    2. Extract data directly from the <DATA> section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
-    3. Numeric values (e.g., # of Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
-    4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
-    5. Percentage values (e.g., SNLR (Trend), Avg. SP/LP) should include a percent sign (e.g., "58.5%").
-    6. Decimal values (e.g., Mos Inv (Trend)) should be formatted to one decimal place (e.g., "2.0").
-    7. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
-    8. Preserve the hierarchical structure of regions (e.g., TREB Total, Halton Region, Burlington, etc.) as presented in the PDF text.
+        1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
+        2. Extract data directly from the <DATA> section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
+        3. Numeric values (e.g., # of Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
+        4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
+        5. Percentage values (e.g., SNLR (Trend), Avg. SP/LP) should include a percent sign (e.g., "58.5%").
+        6. Decimal values (e.g., Mos Inv (Trend)) should be formatted to one decimal place (e.g., "2.0").
+        7. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
+        8. Preserve the hierarchical structure of regions (e.g., TREB Total, Halton Region, Burlington, etc.) as presented in the PDF text.
 
-    **<DATA>**
-    """
-            + text
-            + """
-    **</DATA>**
+        **<DATA>**
+        """
+                + text
+                + """
+        **</DATA>**
 
-    Respond ONLY with CSV content. Do not summarize or explain.
-    """
-        )
+        Respond ONLY with CSV content. Do not summarize or explain.
+        """
+            )
+        else:
+            return (
+                """
+        Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the <DATA> section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s January 2020 report. The CSV must include the following columns: Region, # of Sales, Dollar Volume, Average Price, Median Price, New Listings, Active Listings, Avg. SP/LP, Avg. LDOM. Adhere to the following formatting rules:
+
+        1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
+        2. Extract data directly from the <DATA> section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
+        3. Numeric values (e.g., # of Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
+        4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
+        5. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
+        6. Preserve the hierarchical structure of regions (e.g., TREB Total, Halton Region, Burlington, etc.) as presented in the PDF text.
+
+        **<DATA>**
+        """
+                + text
+                + """
+        **</DATA>**
+
+        Respond ONLY with CSV content. Do not summarize or explain.
+        """
+            )
     else:
-        return (
-            """
-    Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the `<DATA>` section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s June 2024 report. The CSV must include the following columns: Region, Sales, Dollar Volume, Average Price, Median Price, New Listings, SNLR Trend, Active Listings, Mos Inv (Trend), Avg. SP/LP, Avg. LDOM, Avg. PDOM. Adhere to the following formatting rules:
+        if property_type == "all_home_types":
+            return (
+                """
+        Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the `<DATA>` section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s June 2024 report. The CSV must include the following columns: Region, Sales, Dollar Volume, Average Price, Median Price, New Listings, SNLR Trend, Active Listings, Mos Inv (Trend), Avg. SP/LP, Avg. LDOM, Avg. PDOM. Adhere to the following formatting rules:
 
-    1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
-    2. Extract data directly from the `<DATA>` section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
-    3. Numeric values (e.g., Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
-    4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
-    5. Percentage values (e.g., SNLR Trend, Avg. SP/LP) should include a percent sign (e.g., "40.3%").
-    6. Decimal values (e.g., Mos Inv (Trend)) should be formatted to one decimal place (e.g., "3.0").
-    7. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
-    8. Preserve the hierarchical structure of regions (e.g., All TRREB Areas, Halton Region, Burlington, etc.) as presented in the PDF text.
+        1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
+        2. Extract data directly from the `<DATA>` section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
+        3. Numeric values (e.g., Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
+        4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
+        5. Percentage values (e.g., SNLR Trend, Avg. SP/LP) should include a percent sign (e.g., "40.3%").
+        6. Decimal values (e.g., Mos Inv (Trend)) should be formatted to one decimal place (e.g., "3.0").
+        7. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
+        8. Preserve the hierarchical structure of regions (e.g., All TRREB Areas, Halton Region, Burlington, etc.) as presented in the PDF text.
 
-    **<DATA>**
-    """
-            + text
-            + """
-    **</DATA>**
+        **<DATA>**
+        """
+                + text
+                + """
+        **</DATA>**
 
-    Respond ONLY with CSV content. Do not summarize or explain.
-    """
-        )
+        Respond ONLY with CSV content. Do not summarize or explain.
+        """
+            )
+        else:
+            return (
+                """
+        Construct a CSV file containing real estate transaction data for a specified month, using the provided PDF text in the <DATA> section below. The PDF text is structured similarly to the Toronto Regional Real Estate Board’s January 2020 report. The CSV must include the following columns: Region, # of Sales, Dollar Volume, Average Price, Median Price, New Listings, Active Listings, Avg. SP/LP, Avg. LDOM. Adhere to the following formatting rules:
+
+        1. The Region column should have no title in the CSV header (i.e., the first column header is empty).
+        2. Extract data directly from the `<DATA>` section to populate the table, ensuring accuracy and completeness for the specified month indicated in the PDF text.
+        3. Numeric values (e.g., Sales, New Listings, Active Listings) should be formatted without quotes unless they contain commas, in which case use double quotes.
+        4. Monetary values (e.g., Dollar Volume, Average Price, Median Price) should include a dollar sign and commas for thousands (e.g., "$1,234,567") and be wrapped in quotes if commas are present.
+        5. Wrap any field containing commas in double quotes to ensure proper CSV formatting.
+        6. Preserve the hierarchical structure of regions (e.g., All TRREB Areas, Halton Region, Burlington, etc.) as presented in the PDF text.
+
+        **<DATA>**
+        """
+                + text
+                + """
+        **</DATA>**
+
+        Respond ONLY with CSV content. Do not summarize or explain.
+        """
+            )
 
 
 def extract_csv_from_gpt(prompt):
@@ -99,8 +143,6 @@ def save_csv(output_file, csv_text):
 
 def process_all_pdfs():
     """Process all PDF files in the extracted data directories."""
-    all_homes_results = []
-    detached_results = []
 
     # Process ALL HOME TYPES PDFs
     all_homes_files = sorted(
@@ -122,13 +164,6 @@ def process_all_pdfs():
         print(f"Processing ALL HOME TYPES: {pdf_file} (Date: {date_str})...")
         process_pdf(pdf_path, output_file, "all_home_types")
 
-        all_homes_results.append(
-            {
-                "filename": pdf_file,
-                "date": date_str,
-            }
-        )
-
     # Process DETACHED PDFs
     detached_files = sorted(
         [f for f in os.listdir(DETACHED_DIR) if f.lower().endswith(".pdf")]
@@ -149,33 +184,11 @@ def process_all_pdfs():
         print(f"Processing DETACHED: {pdf_file} (Date: {date_str})...")
         process_pdf(pdf_path, output_file, "detached")
 
-        detached_results.append(
-            {
-                "filename": pdf_file,
-                "date": date_str,
-            }
-        )
-
-    # Print statistics
-    total_all_homes = len(all_homes_results)
-    successful_all_homes = sum(1 for r in all_homes_results if r["success"])
-
-    total_detached = len(detached_results)
-    successful_detached = sum(1 for r in detached_results if r["success"])
-
-    print("\nStatistics:")
-    print(
-        f"ALL HOME TYPES: {successful_all_homes}/{total_all_homes} successful ({successful_all_homes / total_all_homes * 100:.1f}%)"
-    )
-    print(
-        f"DETACHED: {successful_detached}/{total_detached} successful ({successful_detached / total_detached * 100:.1f}%)"
-    )
-
 
 def process_pdf(pdf_path, output_file, property_type="detached"):
     base_name = os.path.splitext(os.path.basename(pdf_path))[0]
     text = extract_page_text(pdf_path)
-    prompt = generate_prompt(text, base_name)
+    prompt = generate_prompt(text, base_name, property_type)
     csv = extract_csv_from_gpt(prompt)
     save_csv(output_file, csv)
 
