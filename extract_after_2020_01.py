@@ -1,9 +1,9 @@
 import pdftotext
 
 import os
-import argparse
 from pathlib import Path
 from openai import OpenAI
+from dotenv import load_dotenv
 
 BASE_DIR = Path("./")
 PDF_DIR = BASE_DIR / "extracted_data"
@@ -15,6 +15,8 @@ DETACHED_CSV_DIR = CSV_DIR / "detached"
 
 # MODEL = "grok-3-latest"
 MODEL = "grok-3-mini-fast-beta"
+
+load_dotenv()
 
 client = OpenAI(
     api_key=os.getenv("XAI_API_KEY"),
@@ -145,15 +147,12 @@ def process_all_pdfs():
             continue
 
         print(f"Processing DETACHED: {pdf_file} (Date: {date_str})...")
-        success, shape = process_pdf(pdf_path, output_file, "detached")
+        process_pdf(pdf_path, output_file, "detached")
 
         detached_results.append(
             {
                 "filename": pdf_file,
                 "date": date_str,
-                "success": success,
-                "num_rows": shape[0],
-                "num_cols": shape[1],
             }
         )
 
