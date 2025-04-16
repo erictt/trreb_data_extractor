@@ -88,7 +88,7 @@ The extracted CSVs include the following data (columns may vary based on the tim
 
 ### All Home Types (2020-01 and later)
 - Region
-- # of Sales/Sales
+- No. of Sales/Sales
 - Dollar Volume
 - Average Price
 - Median Price
@@ -102,7 +102,7 @@ The extracted CSVs include the following data (columns may vary based on the tim
 
 ### Detached (2020-01 and later)
 - Region
-- # of Sales/Sales
+- No. of Sales/Sales
 - Dollar Volume
 - Average Price
 - Median Price
