@@ -120,31 +120,6 @@ The Makefile includes several useful targets:
 - **`make docs`**: Generates documentation
 - **`make help`**: Shows available commands with descriptions
 
-### Python API
-
-```python
-import trreb
-
-# Run full pipeline
-trreb.run_full_pipeline()
-
-# Or run individual steps
-trreb.download_data()
-trreb.extract_data()
-trreb.process_data("all_home_types", validate=True, normalize=True)
-enriched_data = trreb.enrich_data("all_home_types")
-
-# Work with the data
-import pandas as pd
-from trreb.config import PROCESSED_DIR
-
-# Load normalized data
-data = pd.read_csv(PROCESSED_DIR / "normalized_all_home_types.csv")
-
-# Load enriched data
-enriched = pd.read_csv(PROCESSED_DIR / "enriched_all_home_types.csv")
-```
-
 ## Data Processing Pipeline
 
 1. **Download TRREB PDFs**: Download monthly market reports from the TRREB website.
@@ -197,10 +172,11 @@ Planned enhancements include:
 
 ## License
 
-[Insert license information here]
+MIT
 
 ## Acknowledgements
 
 - Toronto Regional Real Estate Board (TRREB) for providing the market data
 - Bank of Canada, Statistics Canada, and CMHC for economic data
 - Xai for providing the Grok AI API used in extraction
+- Claude AI for vibe coding
