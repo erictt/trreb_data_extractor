@@ -1,22 +1,33 @@
 # TRREB Data Extractor
 
-A tool for extracting, processing, and analyzing Toronto Regional Real Estate Board (TRREB) market reports.
+A comprehensive tool for extracting, processing, and analyzing Toronto Regional Real Estate Board (TRREB) market reports for housing price prediction.
+
+## Project Goal
+
+This project aims to build a machine learning pipeline that accurately predicts housing prices in the Greater Toronto Area (GTA) and Ontario regions. The pipeline includes:
+
+1. **Data Collection**: Automated downloading of TRREB market reports
+2. **Data Extraction**: Converting PDF reports to structured data
+3. **Data Enrichment**: Integrating economic indicators and other relevant factors
+4. **Model Training**: Developing accurate predictive models for housing prices
+5. **Analysis**: Providing insights into market trends and price drivers
 
 ## Overview
 
-This project downloads and processes TRREB market reports (PDFs) to extract relevant real estate market data into a structured CSV format. It extracts data for both "All Home Types" and "Detached" property categories.
+The TRREB Data Extractor downloads and processes TRREB market reports (PDFs) to extract relevant real estate market data into a structured CSV format. It handles different report formats across years (pre-2020 and post-2020) using specialized extraction methods. The extracted data includes metrics for both "All Home Types" and "Detached" property categories.
 
-The tool handles different TRREB report formats across years (pre-2020 and post-2020) using different extraction methods:
-- For reports prior to January 2020: Uses tabula-py to extract tabular data
-- For reports from January 2020 onwards: Uses AI (Grok API) for more accurate extraction of complex table structures
+The data is intended to train machine learning models that can predict housing prices across different regions, accounting for historical trends, seasonal patterns, and economic factors.
 
 ## Features
 
 - Download TRREB market reports from 2016 to present
 - Extract specific pages for "All Home Types" and "Detached" property data
 - Process extracted PDF pages into structured CSV format
-- Support for different report formats over the years
-- Data is extracted with region hierarchies preserved (e.g., TRREB Total, Halton Region, Burlington, etc.)
+- Support for different report formats over the years:
+  - For reports prior to January 2020: Uses tabula-py to extract tabular data
+  - For reports from January 2020 onwards: Uses AI (Grok API) for more accurate extraction of complex table structures
+- Preserve region hierarchies (e.g., TRREB Total, Halton Region, Burlington, etc.)
+- Data standardization to handle changing column names and formats over time
 
 ## Installation
 
@@ -84,41 +95,31 @@ These scripts process the extracted PDF pages and generate CSV files in:
 
 ## Data Structure
 
-The extracted CSVs include the following data (columns may vary based on the time period):
+The extracted CSVs include detailed real estate market metrics by region, including:
 
-### All Home Types (2020-01 and later)
-- Region
-- No. of Sales/Sales
-- Dollar Volume
-- Average Price
-- Median Price
-- New Listings
-- SNLR (Trend)
-- Active Listings
-- Mos Inv (Trend)
-- Avg. SP/LP
-- Avg. LDOM
-- Avg. PDOM
+- Sales counts
+- Dollar volume
+- Average and median prices
+- New and active listings
+- Sales-to-New-Listings Ratio (SNLR)
+- Days on Market metrics
+- And more market indicators
 
-### Detached (2020-01 and later)
-- Region
-- No. of Sales/Sales
-- Dollar Volume
-- Average Price
-- Median Price
-- New Listings
-- Active Listings
-- Avg. SP/LP
-- Avg. LDOM
+## Machine Learning Integration
 
-## Notes
+The CSV data is designed to be used for training machine learning models to:
 
-- The extraction process uses different methods based on the report date to handle format changes over time
-- The AI extraction method (using Grok) is more accurate for complex table structures in newer reports
-- Data is extracted with region hierarchies preserved for easier analysis
-- Both date-based file naming and source-file tracking are supported for reliable data provenance
+1. Predict housing prices across different regions and property types
+2. Identify market trends and seasonal patterns
+3. Determine key factors influencing price changes
+4. Create forecasting models for specific districts
 
-## Directory Structure
+See the `docs/` directory for detailed information on:
+- Data complexity and preprocessing considerations
+- Economic indicators that can enhance prediction models
+- Suggested machine learning approaches
+
+## Project Structure
 
 ```
 trreb_data_extractor/
@@ -129,6 +130,7 @@ trreb_data_extractor/
 ├── setup.sh                    # Setup script
 ├── requirements.txt            # Python dependencies
 ├── .env                        # API key configuration (create this)
+├── docs/                       # Project documentation
 ├── pdfs/                       # Downloaded PDFs
 ├── extracted_data/             # Extracted PDF pages
 │   ├── all_home_types/
@@ -137,3 +139,36 @@ trreb_data_extractor/
     ├── all_home_types/
     └── detached/
 ```
+
+## Future Development
+
+Planned enhancements include:
+1. Integration of economic indicators (interest rates, unemployment, etc.)
+2. Advanced data preprocessing pipeline
+3. Feature engineering for ML model training
+4. Model development and evaluation
+5. Interactive visualization of predictions
+6. Expanded property type coverage
+
+## Notes
+
+- The extraction process uses different methods based on the report date to handle format changes over time
+- The AI extraction method (using Grok) is more accurate for complex table structures in newer reports
+- Data is extracted with region hierarchies preserved for easier analysis
+- Both date-based file naming and source-file tracking are supported for reliable data provenance
+
+## Documentation
+
+See the `docs/` directory for detailed documentation including:
+- Data complexity overview
+- Guide to economic indicators
+- Development guidelines and prompts
+
+## License
+
+[Insert license information here]
+
+## Acknowledgements
+
+- Toronto Regional Real Estate Board (TRREB) for providing the market data
+- [List any other acknowledgements]
