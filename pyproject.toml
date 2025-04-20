@@ -20,6 +20,7 @@ dependencies = [
   "httpx",
   "idna",
   "jiter",
+  "loguru",
   "numpy",
   "openai",
   "pandas",

@@ -3,7 +3,6 @@ Command-line interface for TRREB data extractor.
 """
 
 import argparse
-import logging
 import os
 import sys
 from datetime import datetime
@@ -41,7 +40,7 @@ def download():
     args = parser.parse_args()
 
     # Setup logger
-    setup_logger("trreb", level=getattr(logging, args.log_level))
+    setup_logger("trreb", level=args.log_level)
 
     # Download reports
     if args.start_year:
@@ -49,8 +48,8 @@ def download():
     else:
         downloaded_files = download_reports()
 
-    # Print summary
-    print(f"\nDownload complete! Downloaded {len(downloaded_files)} files.")
+    # Log summary
+    logger.success(f"\nDownload complete! Downloaded {len(downloaded_files)} files.")
 
     return 0
 
@@ -72,7 +71,7 @@ def extract_pages():
     args = parser.parse_args()
 
     # Setup logger
-    setup_logger("trreb", level=getattr(logging, args.log_level))
+    setup_logger("trreb", level=args.log_level)
 
     # Create page extractor
     extractor = PageExtractor()
@@ -81,37 +80,37 @@ def extract_pages():
     if args.pdf:
         pdf_path = Path(args.pdf)
         if not pdf_path.exists():
-            print(f"Error: PDF file {pdf_path} not found.")
+            logger.error(f"PDF file {pdf_path} not found.")
             return 1
 
         result = extractor.process_pdf(pdf_path)
 
-        # Print result
+        # Log result
         if result["all_home_types_extracted"]:
-            print(f"✓ ALL HOME TYPES page extracted.")
+            logger.success(f"✓ ALL HOME TYPES page extracted.")
         else:
-            print(f"✗ Failed to extract ALL HOME TYPES page.")
+            logger.error(f"✗ Failed to extract ALL HOME TYPES page.")
 
         if result["detached_extracted"]:
-            print(f"✓ DETACHED page extracted.")
+            logger.success(f"✓ DETACHED page extracted.")
         else:
-            print(f"✗ Failed to extract DETACHED page.")
+            logger.error(f"✗ Failed to extract DETACHED page.")
     else:
         # Process all PDFs
         summary_df = extractor.process_all_pdfs()
 
-        # Print statistics
+        # Log statistics
         total_pdfs = len(summary_df)
         successful_all_homes = summary_df["all_home_types_extracted"].sum()
         successful_detached = summary_df["detached_extracted"].sum()
 
-        print(f"\nExtraction complete!")
-        print(f"Total PDFs processed: {total_pdfs}")
-        print(
+        logger.success(f"\nExtraction complete!")
+        logger.info(f"Total PDFs processed: {total_pdfs}")
+        logger.info(
             f"Successfully extracted ALL HOME TYPES: {successful_all_homes}/{total_pdfs} "
             f"({successful_all_homes / total_pdfs * 100:.1f}%)"
         )
-        print(
+        logger.info(
             f"Successfully extracted DETACHED: {successful_detached}/{total_pdfs} "
             f"({successful_detached / total_pdfs * 100:.1f}%)"
         )
@@ -146,7 +145,7 @@ def process():
     args = parser.parse_args()
 
     # Setup logger
-    setup_logger("trreb", level=getattr(logging, args.log_level))
+    setup_logger("trreb", level=args.log_level)
 
     property_type = args.type
 
@@ -162,7 +161,7 @@ def process():
         ]
 
     if not extracted_files:
-        print(f"No extracted files found for property type '{property_type}'.")
+        logger.error(f"No extracted files found for property type '{property_type}'.")
         return 1
 
     # Process each file
@@ -200,9 +199,9 @@ def process():
     total_files = len(results)
     successful_files = summary_df["success"].sum()
 
-    print(f"\nProcessing complete!")
-    print(f"Total files processed: {total_files}")
-    print(
+    logger.success(f"\nProcessing complete!")
+    logger.info(f"Total files processed: {total_files}")
+    logger.info(
         f"Successfully processed: {successful_files}/{total_files} "
         f"({successful_files / total_files * 100:.1f}%)"
     )
@@ -223,7 +222,7 @@ def process():
                     logger.error(f"Error reading {csv_path}: {e}")
 
         if not all_data:
-            print("No data to validate or normalize.")
+            logger.warning("No data to validate or normalize.")
             return 0
 
         combined_df = pd.concat(all_data, ignore_index=True)
@@ -231,12 +230,12 @@ def process():
         # Validate if requested
         if args.validate:
             validation_result = generate_validation_report(combined_df, date_col="date")
-            print("\nValidation Report:")
-            print(validation_result)
+            logger.info("\nValidation Report:")
+            logger.info(validation_result)
 
         # Normalize if requested
         if args.normalize:
-            print("\nNormalizing data...")
+            logger.info("\nNormalizing data...")
             normalized_df = normalize_dataset(combined_df, date_col="date")
 
             # Save normalized data
@@ -244,7 +243,7 @@ def process():
 
             normalized_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
             normalized_df.to_csv(normalized_path, index=False)
-            print(f"Normalized data saved to {normalized_path}")
+            logger.success(f"Normalized data saved to {normalized_path}")
 
     return 0
 
@@ -278,29 +277,29 @@ def run_pipeline():
     args = parser.parse_args()
 
     # Setup logger
-    setup_logger("trreb", level=getattr(logging, args.log_level))
+    setup_logger("trreb", level=args.log_level)
 
     # 1. Download PDFs if not skipped
     if not args.skip_download:
-        print("\n=== Downloading PDFs ===")
+        logger.info("\n=== Downloading PDFs ===")
         downloaded_files = download_reports()
-        print(f"Downloaded {len(downloaded_files)} files.")
+        logger.info(f"Downloaded {len(downloaded_files)} files.")
 
     # 2. Extract pages if not skipped
     if not args.skip_extract:
-        print("\n=== Extracting Pages ===")
+        logger.info("\n=== Extracting Pages ===")
         extractor = PageExtractor()
         summary_df = extractor.process_all_pdfs()
 
     # 3. Process CSVs if not skipped
     if not args.skip_process:
-        print("\n=== Processing All Home Types ===")
+        logger.info("\n=== Processing All Home Types ===")
         process_type("all_home_types", args.validate, args.normalize)
 
-        print("\n=== Processing Detached Homes ===")
+        logger.info("\n=== Processing Detached Homes ===")
         process_type("detached", args.validate, args.normalize)
 
-    print("\n=== Pipeline Complete ===")
+    logger.success("\n=== Pipeline Complete ===")
     return 0
 
 
@@ -320,7 +319,7 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
     extracted_files = get_all_extracted_paths(property_type)
 
     if not extracted_files:
-        print(f"No extracted files found for property type '{property_type}'.")
+        logger.error(f"No extracted files found for property type '{property_type}'.")
         return None
 
     # Process each file
@@ -355,8 +354,8 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
     total_files = len(results)
     successful_files = sum(1 for r in results if r["success"])
 
-    print(f"Total files processed: {total_files}")
-    print(
+    logger.info(f"Total files processed: {total_files}")
+    logger.info(
         f"Successfully processed: {successful_files}/{total_files} "
         f"({successful_files / total_files * 100:.1f}%)"
     )
@@ -378,7 +377,7 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
                         logger.error(f"Error reading {csv_path}: {e}")
 
         if not all_data:
-            print("No data to validate or normalize.")
+            logger.warning("No data to validate or normalize.")
             return None
 
         combined_df = pd.concat(all_data, ignore_index=True)
@@ -386,12 +385,12 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
         # Validate if requested
         if validate:
             validation_result = generate_validation_report(combined_df, date_col="date")
-            print("\nValidation Report:")
-            print(validation_result)
+            logger.info("\nValidation Report:")
+            logger.info(validation_result)
 
         # Normalize if requested
         if normalize:
-            print("\nNormalizing data...")
+            logger.info("\nNormalizing data...")
             normalized_df = normalize_dataset(combined_df, date_col="date")
 
             # Save normalized data
@@ -399,15 +398,6 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
 
             normalized_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
             normalized_df.to_csv(normalized_path, index=False)
-            print(f"Normalized data saved to {normalized_path}")
+            logger.success(f"Normalized data saved to {normalized_path}")
 
     return normalized_path
-
-
-# Register commands in the __all__ list
-__all__ = ["download", "extract_pages", "process", "run_pipeline", "process_type"]
-
-# Update the package __all__ list
-import trreb.cli
-
-trreb.cli.__all__ = __all__

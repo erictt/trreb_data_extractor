@@ -4,7 +4,6 @@ Main script to run the complete TRREB data pipeline.
 """
 
 import argparse
-import logging
 import os
 import sys
 from pathlib import Path
@@ -40,7 +39,7 @@ def main():
     args = parse_args()
     
     # Setup logger
-    logger = setup_logger("trreb", level=getattr(logging, args.log_level))
+    logger = setup_logger("trreb", level=args.log_level)
     
     logger.info("Starting TRREB data pipeline")
     

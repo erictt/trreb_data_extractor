@@ -9,6 +9,8 @@ import sys
 import argparse
 from pathlib import Path
 
+from trreb.utils.logging import logger
+
 # Add the parent directory to the Python path to support direct execution
 parent_dir = str(Path(__file__).resolve().parent.parent.parent)
 if parent_dir not in sys.path:
@@ -17,60 +19,60 @@ if parent_dir not in sys.path:
 def print_command_help(command):
     """Display help for a specific command."""
     if command == "download":
-        print("Download TRREB market reports.")
-        print("\nOptions:")
-        print("  --start-year YEAR  First year to download (default: 2016)")
-        print("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
+        logger.info("Download TRREB market reports.")
+        logger.info("\nOptions:")
+        logger.info("  --start-year YEAR  First year to download (default: 2016)")
+        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     elif command == "extract":
-        print("Extract specific pages from TRREB PDFs.")
-        print("\nOptions:")
-        print("  --pdf PDF          Process a specific PDF file (default: process all PDFs)")
-        print("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
+        logger.info("Extract specific pages from TRREB PDFs.")
+        logger.info("\nOptions:")
+        logger.info("  --pdf PDF          Process a specific PDF file (default: process all PDFs)")
+        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     elif command == "process":
-        print("Process extracted pages into CSV format.")
-        print("\nOptions:")
-        print("  --type TYPE        Type of property data to process: all_home_types or detached (required)")
-        print("  --date DATE        Process a specific date (e.g., 2020-01)")
-        print("  --validate         Validate data after processing")
-        print("  --normalize        Normalize data after processing")
-        print("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
+        logger.info("Process extracted pages into CSV format.")
+        logger.info("\nOptions:")
+        logger.info("  --type TYPE        Type of property data to process: all_home_types or detached (required)")
+        logger.info("  --date DATE        Process a specific date (e.g., 2020-01)")
+        logger.info("  --validate         Validate data after processing")
+        logger.info("  --normalize        Normalize data after processing")
+        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     elif command == "pipeline":
-        print("Run the complete TRREB data pipeline.")
-        print("\nOptions:")
-        print("  --skip-download    Skip downloading PDFs")
-        print("  --skip-extract     Skip extracting pages")
-        print("  --skip-process     Skip processing CSVs")
-        print("  --skip-economic    Skip economic data integration")
-        print("  --validate         Validate data after processing")
-        print("  --normalize        Normalize data after processing")
-        print("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
+        logger.info("Run the complete TRREB data pipeline.")
+        logger.info("\nOptions:")
+        logger.info("  --skip-download    Skip downloading PDFs")
+        logger.info("  --skip-extract     Skip extracting pages")
+        logger.info("  --skip-process     Skip processing CSVs")
+        logger.info("  --skip-economic    Skip economic data integration")
+        logger.info("  --validate         Validate data after processing")
+        logger.info("  --normalize        Normalize data after processing")
+        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     elif command == "enrich":
-        print("Enrich processed data with economic indicators.")
-        print("\nOptions:")
-        print("  --property-type TYPE  Type of property to enrich: all_home_types or detached (default: both)")
-        print("  --include-lags        Include lagged economic indicators (default: true)")
-        print("  --log-level LEVEL     Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
+        logger.info("Enrich processed data with economic indicators.")
+        logger.info("\nOptions:")
+        logger.info("  --property-type TYPE  Type of property to enrich: all_home_types or detached (default: both)")
+        logger.info("  --include-lags        Include lagged economic indicators (default: true)")
+        logger.info("  --log-level LEVEL     Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     else:
-        print(f"Unknown command: {command}")
+        logger.warning(f"Unknown command: {command}")
         print_main_help()
 
 
 def print_main_help():
     """Display the main help message."""
-    print("TRREB Data Extractor CLI")
-    print("\nUsage: python -m trreb.cli COMMAND [OPTIONS]")
-    print("\nCommands:")
-    print("  download    Download TRREB market reports")
-    print("  extract     Extract specific pages from TRREB PDFs")
-    print("  process     Process extracted pages into CSV format")
-    print("  pipeline    Run the complete data pipeline")
-    print("  enrich      Enrich processed data with economic indicators")
-    print("\nUse 'python -m trreb.cli COMMAND --help' for help on a specific command.")
+    logger.info("TRREB Data Extractor CLI")
+    logger.info("\nUsage: python -m trreb.cli COMMAND [OPTIONS]")
+    logger.info("\nCommands:")
+    logger.info("  download    Download TRREB market reports")
+    logger.info("  extract     Extract specific pages from TRREB PDFs")
+    logger.info("  process     Process extracted pages into CSV format")
+    logger.info("  pipeline    Run the complete data pipeline")
+    logger.info("  enrich      Enrich processed data with economic indicators")
+    logger.info("\nUse 'python -m trreb.cli COMMAND --help' for help on a specific command.")
 
 
 def main():
@@ -126,23 +128,21 @@ def main():
             # Import functionality
             from trreb.economic.integration import enrich_all_datasets
             
-            print("Enriching all datasets with economic indicators...")
+            logger.info("Enriching all datasets with economic indicators...")
             enriched_data = enrich_all_datasets()
             
             # Print statistics for enriched datasets
             for property_type, df in enriched_data.items():
-                print(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+                logger.info(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
             
-            print("Enrichment complete!")
+            logger.info("Enrichment complete!")
             return 0
         except Exception as e:
-            print(f"Error during enrichment: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Error during enrichment: {e}", exception=e)
             return 1
     
     else:
-        print(f"Unknown command: {command}")
+        logger.warning(f"Unknown command: {command}")
         print_main_help()
         return 1
 

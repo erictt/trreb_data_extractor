@@ -10,16 +10,18 @@ from pathlib import Path
 # Add the parent directory to the Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from trreb.utils.logging import logger
+
 commands = ["download", "extract", "process", "pipeline", "enrich"]
 
 def main():
     """Print help for all CLI commands."""
-    print("Testing TRREB CLI help commands...\n")
+    logger.info("Testing TRREB CLI help commands...\n")
     
     for cmd in commands:
-        print(f"\n{'='*80}")
-        print(f"Help for command: {cmd}")
-        print(f"{'='*80}")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"Help for command: {cmd}")
+        logger.info(f"{'='*80}")
         try:
             result = subprocess.run(
                 ["python", "-m", "trreb.cli", cmd, "--help"],
@@ -27,11 +29,11 @@ def main():
                 text=True,
                 check=True
             )
-            print(result.stdout)
+            logger.info(result.stdout)
         except subprocess.CalledProcessError as e:
-            print(f"Error: {e}")
-            print(f"Stdout: {e.stdout}")
-            print(f"Stderr: {e.stderr}")
+            logger.error(f"Error: {e}")
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
     
     return 0
 
