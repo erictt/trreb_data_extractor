@@ -46,25 +46,25 @@ clean:  ## Remove generated files and directories
 
 download:  ## Download TRREB PDFs
 	@echo "Downloading TRREB PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli.commands download
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli download --log-level DEBUG
 
 extract:  ## Extract relevant pages from PDFs
 	@echo "Extracting pages from PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli.commands extract-pages
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli extract
 
 process:  ## Process extracted pages into CSV format
 	@echo "Processing all home types data..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli.commands process --type all_home_types --validate --normalize
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli process --type all_home_types --validate --normalize
 	@echo "Processing detached homes data..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli.commands process --type detached --validate --normalize
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli process --type detached --validate --normalize
 
 enrich:  ## Enrich processed data with economic indicators
 	@echo "Enriching data with economic indicators..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m scripts.run_pipeline --skip-download --skip-extract --skip-process
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli enrich
 
 pipeline:  ## Run complete data pipeline
 	@echo "Running full pipeline..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) scripts/run_pipeline.py
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli pipeline
 
 lint:  ## Run linters (flake8, black, isort, mypy)
 	@echo "Running linters..."

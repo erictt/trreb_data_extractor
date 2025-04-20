@@ -90,6 +90,13 @@ class TrrebDownloader:
         Returns:
             List of paths to downloaded files
         """
+        print(f"Starting download from year {start_year} to current date {self.current_date.year}-{self.current_date.month}")
+        logger.info(f"Starting download from year {start_year} to current date {self.current_date.year}-{self.current_date.month}")
+        
+        # Check if PDF directory exists and is writable
+        print(f"Target directory: {self.target_dir} (exists: {self.target_dir.exists()})")
+        logger.info(f"Target directory: {self.target_dir} (exists: {self.target_dir.exists()})")
+        
         # Use a thread pool to download files concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_DOWNLOAD_WORKERS) as executor:
             futures = []
@@ -103,11 +110,14 @@ class TrrebDownloader:
                     max_month = self.current_date.month
 
                 for month in range(1, max_month + 1):
+                    print(f"Adding download task for {year}-{month}")
                     futures.append(executor.submit(self.download_file, year, month))
 
             # Track progress
             total = len(futures)
             successful = 0
+            
+            print(f"Created {total} download tasks")
             
             # Wait for all downloads to complete
             for future in tqdm(
@@ -119,9 +129,13 @@ class TrrebDownloader:
                     successful += 1
 
         logger.info(f"Download complete. Successfully downloaded {successful}/{total} files.")
+        print(f"Download complete. Successfully downloaded {successful}/{total} files.")
         
         # Return list of downloaded files
-        return [p for p in self.target_dir.glob('*.pdf') if p.is_file()]
+        downloaded_files = [p for p in self.target_dir.glob('*.pdf') if p.is_file()]
+        print(f"Found {len(downloaded_files)} PDF files in target directory")
+        
+        return downloaded_files
 
 
 # Convenience function for command-line use
@@ -135,7 +149,14 @@ def download_reports(start_year: Optional[int] = None) -> List[Path]:
     Returns:
         List of paths to downloaded files
     """
+    print("Inside download_reports function")
+    print(f"Creating TrrebDownloader with target_dir={PDF_DIR}")
     downloader = TrrebDownloader()
+    
     if start_year:
+        print(f"Calling download_all with start_year={start_year}")
         return downloader.download_all(start_year)
+    
+    from trreb.config import START_YEAR
+    print(f"Calling download_all with default start_year={START_YEAR}")
     return downloader.download_all()

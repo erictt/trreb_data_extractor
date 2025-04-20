@@ -53,10 +53,7 @@ dev = [
 ml = ["scikit-learn>=1.0.0", "matplotlib>=3.5.0", "seaborn>=0.11.2"]
 
 [project.scripts]
-trreb-download = "trreb.cli.commands:download"
-trreb-extract-pages = "trreb.cli.commands:extract_pages"
-trreb-process = "trreb.cli.commands:process"
-trreb-run-pipeline = "trreb.cli.commands:run_pipeline"
+trreb = "trreb.cli.__main__:main"
 
 [tool.setuptools]
 packages = ["trreb"]

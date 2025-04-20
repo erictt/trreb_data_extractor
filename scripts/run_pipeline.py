@@ -69,7 +69,7 @@ def main():
     
     # 3. Process CSVs if not skipped
     if not args.skip_process:
-        # Import process_type here to avoid circular imports
+        # Get the process_type function, avoiding circular imports
         from trreb.cli.commands import process_type
         
         logger.info("=== Processing All Home Types ===")

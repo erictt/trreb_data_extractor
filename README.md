@@ -85,26 +85,23 @@ trreb_data_extractor/
 
 ### Command-Line Interface
 
-Run the complete pipeline:
+The package provides a unified command-line interface through the `trreb.cli` module. You can run the commands as follows:
 
 ```bash
-python scripts/run_pipeline.py
-```
+# Complete pipeline
+python -m trreb.cli pipeline
 
-Or run specific steps:
-
-```bash
 # Download reports
-python -m trreb.cli.commands download
+python -m trreb.cli download
 
 # Extract pages
-python -m trreb.cli.commands extract-pages
+python -m trreb.cli extract
 
 # Process extracted pages
-python -m trreb.cli.commands process --type all_home_types --validate --normalize
+python -m trreb.cli process --type all_home_types --validate --normalize
 
-# Run pipeline with options
-python scripts/run_pipeline.py --skip-download --validate --normalize
+# Enrich data with economic indicators
+python -m trreb.cli enrich
 ```
 
 
@@ -124,6 +121,26 @@ The Makefile includes several useful targets:
 - **`make test`**: Runs tests
 - **`make docs`**: Generates documentation
 - **`make help`**: Shows available commands with descriptions
+
+#### Debugging
+
+To enable debug logging, use the `--log-level` parameter with any command:
+
+```bash
+python -m trreb.cli download --log-level DEBUG
+```
+
+Or when using make:
+
+```bash
+# The download command already includes DEBUG level
+make download
+
+# For other commands, use environment variables
+LOG_LEVEL=DEBUG make extract
+```
+
+Debug logs are helpful for troubleshooting issues with the data pipeline.
 
 ## Data Processing Pipeline
 
