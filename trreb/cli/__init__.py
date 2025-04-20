@@ -2,7 +2,15 @@
 Command-line interface package for TRREB data extractor.
 """
 
-# Do not import from trreb.cli.commands here to avoid circular imports
-# Instead, import modules only when needed or use lazy imports
+# Import commands for easier access at the package level
+from trreb.cli.commands import (
+    fetch,
+    process,
+    economy,
+)
 
-__all__ = []
+__all__ = [
+    "fetch",
+    "process",
+    "economy",
+]

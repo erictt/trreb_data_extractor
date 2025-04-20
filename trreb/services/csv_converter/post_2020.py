@@ -1,5 +1,5 @@
 """
-Extractor for TRREB reports from January 2020 onwards using AI models.
+Table extractor for TRREB reports from January 2020 onwards using AI models.
 """
 
 import os
@@ -12,12 +12,12 @@ import pdftotext
 from openai import OpenAI
 
 from trreb.config import COLUMN_NAME_MAPPING, GROK_MODEL, REGION_NAME_MAPPING, XAI_API_BASE_URL, XAI_API_KEY
-from trreb.extractor.base import BaseExtractor
+from trreb.services.csv_converter.base import TableExtractor
 from trreb.utils.logging import logger
 
 
-class Post2020Extractor(BaseExtractor):
-    """Extractor for TRREB reports from January 2020 onwards using AI models."""
+class Post2020TableExtractor(TableExtractor):
+    """Table extractor for TRREB reports from January 2020 onwards using AI models."""
     
     def __init__(self, property_type: str):
         """

@@ -1,42 +1,49 @@
 """
-Module for downloading TRREB market reports.
+Module for downloading TRREB market reports from the official website.
 """
 
 import concurrent.futures
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import requests
 from tqdm import tqdm
 
-from trreb.config import (
-    MAX_DOWNLOAD_WORKERS, PDF_DIR, START_YEAR, TRREB_BASE_URL
-)
+from trreb.config import MAX_DOWNLOAD_WORKERS, PDF_DIR, START_YEAR, TRREB_BASE_URL
 from trreb.utils.logging import logger
 
 
 class TrrebDownloader:
-    """Class for downloading TRREB market reports."""
+    """
+    Class for downloading TRREB market report PDFs from the official website.
     
-    def __init__(self, target_dir: Path = PDF_DIR):
+    This class handles:
+    - Constructing download URLs based on year and month
+    - Downloading individual PDF files
+    - Concurrent downloading of multiple reports
+    - Tracking download progress
+    """
+
+    def __init__(self, target_dir: Path = PDF_DIR, base_url: str = TRREB_BASE_URL):
         """
-        Initialize the downloader.
+        Initialize the TRREB downloader.
         
         Args:
-            target_dir: Directory to save downloaded PDFs
+            target_dir: Directory to save downloaded PDFs (default: from config)
+            base_url: Base URL template for TRREB reports (default: from config)
         """
-        self.base_url = TRREB_BASE_URL
+        self.base_url = base_url
         self.target_dir = target_dir
         
-        # Create the target directory if it doesn't exist
+        # Create target directory if it doesn't exist
         os.makedirs(self.target_dir, exist_ok=True)
         
         # Current date to avoid trying to download future dates
         self.current_date = datetime.now()
     
-    def download_file(self, year: int, month: int) -> bool:
+    def download_file(self, year: int, month: int) -> Tuple[bool, Optional[Path]]:
         """
         Download a single TRREB market report file.
         
@@ -45,7 +52,8 @@ class TrrebDownloader:
             month: Month of the report (1-12)
             
         Returns:
-            True if download was successful, False otherwise
+            Tuple of (success, path) where success is True if download was successful,
+            and path is the path to the downloaded file or None if download failed
         """
         # Format year as 2 digits (e.g., 2016 -> 16)
         year_short = year % 100
@@ -54,12 +62,12 @@ class TrrebDownloader:
         url = self.base_url.format(year_short, month)
 
         # Create the output file path
-        output_path = os.path.join(self.target_dir, f"mw{year_short:02d}{month:02d}.pdf")
+        output_path = self.target_dir / f"mw{year_short:02d}{month:02d}.pdf"
 
         # Don't re-download if file already exists
-        if os.path.exists(output_path):
+        if output_path.exists():
             logger.debug(f"File already exists: {output_path}")
-            return True
+            return True, output_path
 
         try:
             # Make the request
@@ -72,20 +80,20 @@ class TrrebDownloader:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
                 logger.info(f"Downloaded: {url} -> {output_path}")
-                return True
+                return True, output_path
             else:
                 logger.warning(f"Failed to download {url}: HTTP {response.status_code}")
-                return False
+                return False, None
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
-            return False
+            return False, None
     
     def download_all(self, start_year: int = START_YEAR) -> List[Path]:
         """
         Download all available TRREB market reports.
         
         Args:
-            start_year: First year to download (default: 2016)
+            start_year: First year to download (default: from config)
             
         Returns:
             List of paths to downloaded files
@@ -114,6 +122,7 @@ class TrrebDownloader:
             # Track progress
             total = len(futures)
             successful = 0
+            downloaded_files = []
             
             logger.info(f"Created {total} download tasks")
             
@@ -123,37 +132,30 @@ class TrrebDownloader:
                 total=total, 
                 desc="Downloading reports"
             ):
-                if future.result():
+                success, path = future.result()
+                if success and path:
                     successful += 1
+                    downloaded_files.append(path)
 
-        logger.success(f"Download complete. Successfully downloaded {successful}/{total} files.")
-        
-        # Return list of downloaded files
-        downloaded_files = [p for p in self.target_dir.glob('*.pdf') if p.is_file()]
-        logger.info(f"Found {len(downloaded_files)} PDF files in target directory")
-        
+        logger.info(f"Download complete. Successfully downloaded {successful}/{total} files.")
         return downloaded_files
 
 
-# Convenience function for command-line use
-def download_reports(start_year: Optional[int] = None) -> List[Path]:
+# Convenience function for direct usage
+def download_reports(start_year: Optional[int] = None, target_dir: Path = PDF_DIR) -> List[Path]:
     """
-    Download all available TRREB market reports.
+    Download all available TRREB market reports from the start year to present.
     
     Args:
         start_year: First year to download (default: config.START_YEAR)
+        target_dir: Directory to save downloaded PDFs (default: from config)
         
     Returns:
         List of paths to downloaded files
     """
-    logger.debug("Inside download_reports function")
-    logger.debug(f"Creating TrrebDownloader with target_dir={PDF_DIR}")
-    downloader = TrrebDownloader()
+    downloader = TrrebDownloader(target_dir=target_dir)
     
     if start_year:
-        logger.debug(f"Calling download_all with start_year={start_year}")
         return downloader.download_all(start_year)
     
-    from trreb.config import START_YEAR
-    logger.debug(f"Calling download_all with default start_year={START_YEAR}")
     return downloader.download_all()

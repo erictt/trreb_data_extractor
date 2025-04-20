@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 
 from trreb.config import PROCESSED_DIR, ECONOMIC_DIR
-from trreb.economic.sources import get_all_data_sources
+from trreb.services.economic.sources import get_all_data_sources
 from trreb.utils.logging import logger
 
 
@@ -209,18 +209,18 @@ def create_master_economic_dataset() -> pd.DataFrame:
     return master_df
 
 
-def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> pd.DataFrame:
+def integrate_economic_data(property_type: str, include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> pd.DataFrame:
     """
-    Enrich TRREB data with economic indicators.
-    
+    Integrate TRREB data with economic indicators.
+
     Args:
         property_type: Type of property (all_home_types or detached)
         include_lags: Whether to include lagged economic indicators
         lag_periods: List of lag periods to include
         force_download: Whether to force download of economic data
-        
+
     Returns:
-        DataFrame containing enriched TRREB data
+        DataFrame containing integrated TRREB and economic data
     """
     # Load normalized TRREB data
     trreb_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
@@ -231,7 +231,7 @@ def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods
     
     if not trreb_path.exists():
         logger.warning(f"Normalized TRREB data not found at {trreb_path}")
-        logger.info(f"Economic data has been downloaded and prepared, but no TRREB data to enrich.")
+        logger.info(f"Economic data has been downloaded and prepared, but no TRREB data to integrate.")
         logger.info(f"You can find the economic data at {ECONOMIC_DIR}/master_economic_data.csv")
         return pd.DataFrame()
     
@@ -307,38 +307,39 @@ def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods
     # Filter out duplicate columns
     cols_to_keep = [col for col in enriched_df.columns if not (col.endswith('_econ') and col.replace('_econ', '') in enriched_df.columns)]
     enriched_df = enriched_df[cols_to_keep]
-    
-    # Save the enriched dataset
-    output_path = PROCESSED_DIR / f"enriched_{property_type}.csv"
+
+    # Save the integrated dataset
+    output_path = PROCESSED_DIR / f"integrated_economic_{property_type}.csv"
     enriched_df.to_csv(output_path, index=False)
-    logger.info(f"Enriched TRREB data saved to {output_path}")
-    
+    logger.info(f"Integrated economic data saved to {output_path}")
+
     return enriched_df
 
 
-def enrich_all_datasets(include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> Dict[str, pd.DataFrame]:
+def integrate_economic_data_all(include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> Dict[str, pd.DataFrame]:
     """
-    Enrich all TRREB datasets with economic indicators.
-    
+    Integrate all TRREB datasets with economic indicators.
+
     Args:
         include_lags: Whether to include lagged economic indicators
         lag_periods: List of lag periods to include
-        
+        force_download: Whether to force download of economic data
+
     Returns:
-        Dictionary of property type to enriched DataFrame
+        Dictionary of property type to integrated DataFrame
     """
     property_types = ["all_home_types", "detached"]
-    enriched_data = {}
-    
+    integrated_data = {}
+
     for property_type in property_types:
         try:
-            df = enrich_trreb_data(property_type, include_lags, lag_periods, force_download)
+            df = integrate_economic_data(property_type, include_lags, lag_periods, force_download)
             if not df.empty:
-                enriched_data[property_type] = df
-                logger.info(f"Enriched {property_type} dataset with {len(df)} rows")
+                integrated_data[property_type] = df
+                logger.info(f"Integrated {property_type} dataset with {len(df)} rows")
             else:
-                logger.warning(f"No enriched data created for {property_type}")
+                logger.warning(f"No integrated data created for {property_type}")
         except Exception as e:
-            logger.error(f"Error enriching {property_type} data: {e}")
-    
-    return enriched_data
+            logger.error(f"Error integrating {property_type} data: {e}")
+
+    return integrated_data

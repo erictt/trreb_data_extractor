@@ -1,5 +1,5 @@
 """
-Base classes for TRREB data extractors.
+Base classes for TRREB data table extractors.
 """
 
 import os
@@ -12,8 +12,8 @@ import pandas as pd
 from trreb.utils.logging import logger
 
 
-class BaseExtractor(ABC):
-    """Abstract base class for TRREB data extractors."""
+class TableExtractor(ABC):
+    """Abstract base class for TRREB data table extractors."""
     
     def __init__(self, property_type: str):
         """
@@ -50,13 +50,14 @@ class BaseExtractor(ABC):
         """
         pass
     
-    def process_pdf(self, pdf_path: Path, output_path: Path) -> Tuple[bool, Tuple[int, int]]:
+    def process_pdf(self, pdf_path: Path, output_path: Path, overwrite: bool = False) -> Tuple[bool, Tuple[int, int]]:
         """
         Extract table from PDF and save as CSV.
         
         Args:
             pdf_path: Path to the PDF file
             output_path: Path to save the CSV output
+            overwrite: Whether to overwrite existing output file
             
         Returns:
             Tuple of (success, (num_rows, num_cols))
@@ -64,8 +65,20 @@ class BaseExtractor(ABC):
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
+        # Fast path: Check if the output file already exists before any processing
+        if output_path.exists() and not overwrite:
+            logger.info(f"CSV file {output_path} already exists. Skipping conversion.")
+            # Try to read the existing file to get its shape for consistent reporting
+            try:
+                existing_df = pd.read_csv(output_path)
+                return True, existing_df.shape
+            except Exception as e:
+                logger.warning(f"Could not read existing CSV {output_path}: {e}")
+                return True, (0, 0)  # Return success but unknown shape
+        
         try:
             # Extract table
+            logger.info(f"Extracting table from {pdf_path}")
             df = self.extract_table(pdf_path)
             
             # Clean and standardize the table

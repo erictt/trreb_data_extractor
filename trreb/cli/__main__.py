@@ -1,204 +1,150 @@
 #!/usr/bin/env python3
 """
-Command-line entry point for the TRREB data extractor.
-This module makes the package directly executable with:
-    python -m trreb.cli [command] [arguments]
+Command-line entry point for the TRREB data extractor using argparse subcommands.
 """
 
 import sys
 import argparse
 from pathlib import Path
 
-from trreb.utils.logging import logger
+from trreb.cli.commands import fetch, process, economy
+from trreb.utils.logging import setup_logger, logger
 
 # Add the parent directory to the Python path to support direct execution
+# and importing from trreb package
 parent_dir = str(Path(__file__).resolve().parent.parent.parent)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
-
-def print_command_help(command):
-    """Display help for a specific command."""
-    if command == "download":
-        logger.info("Download TRREB market reports.")
-        logger.info("\nOptions:")
-        logger.info("  --start-year YEAR  First year to download (default: 2016)")
-        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
-    
-    elif command == "extract":
-        logger.info("Extract specific pages from TRREB PDFs.")
-        logger.info("\nOptions:")
-        logger.info("  --pdf PDF          Process a specific PDF file (default: process all PDFs)")
-        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
-    
-    elif command == "process":
-        logger.info("Process extracted pages into CSV format.")
-        logger.info("\nOptions:")
-        logger.info("  --type TYPE        Type of property data to process: all_home_types or detached (required)")
-        logger.info("  --date DATE        Process a specific date (e.g., 2020-01)")
-        logger.info("  --validate         Validate data after processing")
-        logger.info("  --normalize        Normalize data after processing")
-        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
-    
-    elif command == "pipeline":
-        logger.info("Run the complete TRREB data pipeline.")
-        logger.info("\nOptions:")
-        logger.info("  --skip-download    Skip downloading PDFs")
-        logger.info("  --skip-extract     Skip extracting pages")
-        logger.info("  --skip-process     Skip processing CSVs")
-        logger.info("  --skip-economic    Skip economic data integration")
-        logger.info("  --validate         Validate data after processing")
-        logger.info("  --normalize        Normalize data after processing")
-        logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
-    
-    elif command == "economy":
-        logger.info("Download and process economic indicators data.")
-        logger.info("\nOptions:")
-        logger.info("  --property-type TYPE  Type of property to integrate with: all_home_types or detached (default: both)")
-        logger.info("  --include-lags        Include lagged economic indicators (default: true)")
-        logger.info("  --force-download      Force re-download of economic data even if cached data exists")
-        logger.info("  --log-level LEVEL     Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
-    
-    else:
-        logger.warning(f"Unknown command: {command}")
-        print_main_help()
-
-
-def print_main_help():
-    """Display the main help message."""
-    logger.info("TRREB Data Extractor CLI")
-    logger.info("\nUsage: python -m trreb.cli COMMAND [OPTIONS]")
-    logger.info("\nCommands:")
-    logger.info("  download    Download TRREB market reports")
-    logger.info("  extract     Extract specific pages from TRREB PDFs")
-    logger.info("  process     Process extracted pages into CSV format")
-    logger.info("  pipeline    Run the complete data pipeline")
-    logger.info("  economy     Download and process economic indicators data")
-    logger.info("\nUse 'python -m trreb.cli COMMAND --help' for help on a specific command.")
 
 
 def main():
     """
     Main entry point for the command-line interface.
-    Parses the command and delegates to the appropriate function.
+    Uses argparse subparsers to handle different commands.
     """
-    # Need at least one argument (the command)
-    if len(sys.argv) < 2:
-        print_main_help()
-        return 1
-    
-    # Get the command
-    command = sys.argv[1].lower()
-    
-    # Handle help requests
-    if command in ["-h", "--help"]:
-        print_main_help()
-        return 0
-    
-    # Handle command-specific help
-    if len(sys.argv) > 2 and sys.argv[2] in ["-h", "--help"]:
-        print_command_help(command)
-        return 0
-    
-    # Delegate to the appropriate command function
-    if command == "download":
-        # Import here to avoid circular dependencies
-        from trreb.cli.commands import download
-        # Remove the command from sys.argv
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
-        return download()
-    
-    elif command == "extract":
-        from trreb.cli.commands import extract_pages
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
-        return extract_pages()
-    
-    elif command == "process":
-        from trreb.cli.commands import process
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
-        return process()
-    
-    elif command == "pipeline":
-        # Import here to avoid circular imports
-        from scripts.run_pipeline import main as run_pipeline
-        sys.argv = [sys.argv[0]] + sys.argv[2:]
-        return run_pipeline()
-    
-    elif command == "enrich":
-        # Redirect to economy command with a deprecation warning
-        logger.warning("The 'enrich' command is deprecated. Please use 'economy' instead.")
-        command = "economy"
-        # Fall through to the economy command
-    
-    elif command == "economy":
-        # Parse arguments for economy command
-        parser = argparse.ArgumentParser(description="Download and process economic indicators data.")
-        parser.add_argument("--property-type", choices=["all_home_types", "detached"], 
-                           help="Type of property to enrich (default: both)")
-        parser.add_argument("--include-lags", action="store_true", default=True,
-                           help="Include lagged economic indicators (default: true)")
-        parser.add_argument("--force-download", action="store_true", 
-                           help="Force download of economic data even if cached data exists")
-        parser.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], 
-                           default="INFO", help="Set the logging level")
-        
-        # Parse the arguments
-        args = parser.parse_args(sys.argv[2:])
-        
-        # Setup logger
-        from trreb.utils.logging import setup_logger, logger
+    parser = argparse.ArgumentParser(
+        description="TRREB Data Extractor CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    # Global arguments (optional, e.g., log level if consistent across all)
+    # parser.add_argument('--log-level', ...)
+
+    subparsers = parser.add_subparsers(
+        dest="command", required=True, help="Available commands"
+    )
+
+    # --- Fetch Command ---
+    parser_fetch = subparsers.add_parser(
+        "fetch", help="Download and/or extract TRREB market reports."
+    )
+
+    parser_fetch.add_argument(
+        "operation",
+        choices=["fetch", "extract", "both"],
+        help="Operation to perform: fetch (download only), extract (extract only), or both",
+    )
+
+    parser_fetch.add_argument(
+        "--start-year",
+        type=int,
+        help="First year to download (default: config.START_YEAR), used with fetch and both operations",
+    )
+
+    parser_fetch.add_argument(
+        "--pdf",
+        help="Process a specific PDF file for extraction (default: process all PDFs), used with extract operation",
+    )
+
+    parser_fetch.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing files"
+    )
+
+    parser_fetch.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging level",
+    )
+
+    parser_fetch.set_defaults(func=fetch)
+
+    # --- Process Command ---
+    parser_process = subparsers.add_parser(
+        "process", help="Process extracted pages into CSV format."
+    )
+    parser_process.add_argument(
+        "--type",
+        choices=["all_home_types", "detached"],
+        required=True,
+        help="Type of property data to process",
+    )
+    parser_process.add_argument(
+        "--date", help="Process a specific date (e.g., 2020-01)"
+    )
+    parser_process.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing CSV files"
+    )
+    parser_process.add_argument(
+        "--validate", action="store_true", help="Validate data after processing"
+    )
+    parser_process.add_argument(
+        "--normalize", action="store_true", help="Normalize data after processing"
+    )
+    parser_process.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser_process.set_defaults(func=process)  # Link to function in commands module
+
+    # --- Economy Command ---
+    parser_economy = subparsers.add_parser(
+        "economy",
+        help="Download, process, and optionally integrate economic indicators data.",
+    )
+    parser_economy.add_argument(
+        "--property-type",
+        choices=["all_home_types", "detached"],
+        help="Type of property to integrate with (optional, needed for integration)",
+    )
+    parser_economy.add_argument(
+        "--include-lags",
+        action=argparse.BooleanOptionalAction,  # Use BooleanOptionalAction for --include-lags/--no-include-lags
+        default=True,
+        help="Include lagged economic indicators during integration",
+    )
+    parser_economy.add_argument(
+        "--force-download",
+        action="store_true",
+        help="Force download of economic data even if cached data exists",
+    )
+    parser_economy.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser_economy.set_defaults(func=economy)  # Link to function in commands module
+
+    # Parse arguments
+    args = parser.parse_args()
+
+    # Setup logger based on parsed arguments (if log_level is present)
+    if hasattr(args, "log_level"):
         setup_logger("trreb", level=args.log_level)
-        
-        try:
-            # Import functionality
-            from trreb.economic.integration import enrich_trreb_data, enrich_all_datasets, prepare_economic_data
-            from trreb.config import PROCESSED_DIR
-            
-            # Check if normalized TRREB data exists
-            if args.property_type:
-                trreb_paths = [PROCESSED_DIR / f"normalized_{args.property_type}.csv"]
-            else:
-                trreb_paths = [
-                    PROCESSED_DIR / "normalized_all_home_types.csv",
-                    PROCESSED_DIR / "normalized_detached.csv"
-                ]
-            
-            trreb_data_exists = any(path.exists() for path in trreb_paths)
-            
-            if not trreb_data_exists:
-                # If no TRREB data exists, just download and prepare economic data
-                logger.info("No normalized TRREB data found. Downloading economic data only...")
-                econ_df = prepare_economic_data(force_download=args.force_download)
-                logger.info(f"Economic data downloaded and prepared with {len(econ_df)} rows and {len(econ_df.columns)} columns")
-            else:
-                # TRREB data exists, proceed with enrichment
-                if args.property_type:
-                    # Enrich specific property type
-                    logger.info(f"Enriching {args.property_type} dataset with economic indicators...")
-                    df = enrich_trreb_data(args.property_type, include_lags=args.include_lags, 
-                                         force_download=args.force_download)
-                    if not df.empty:
-                        logger.info(f"Enriched {args.property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
-                else:
-                    # Enrich all datasets
-                    logger.info("Enriching all datasets with economic indicators...")
-                    enriched_data = enrich_all_datasets(include_lags=args.include_lags, 
-                                                      force_download=args.force_download)
-                    
-                    # Print statistics for enriched datasets
-                    for property_type, df in enriched_data.items():
-                        if not df.empty:
-                            logger.info(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
-            
-            logger.info("Economic data processing complete!")
-            return 0
-        except Exception as e:
-            logger.error(f"Error during enrichment: {e}")
-            return 1
-    
     else:
-        logger.warning(f"Unknown command: {command}")
-        print_main_help()
+        # Default logger setup if no log_level argument for a command
+        setup_logger("trreb", level="INFO")
+
+    # Execute the function associated with the chosen subcommand
+    try:
+        return args.func(args)  # Pass parsed args to the command function
+    except Exception as e:
+        logger.exception(f"An error occurred during command execution: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

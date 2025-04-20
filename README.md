@@ -9,9 +9,12 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 ## Features
 
 - **Automated Data Collection**: Downloads market reports from the TRREB website (2016-present)
-- **Intelligent Extraction**: Processes PDFs using appropriate methods based on report format:
-  - Pre-2020 reports: Uses tabula-py for tabular data extraction
-  - Post-2020 reports: Uses AI (Grok API) for more accurate extraction of complex tables
+- **Three-Stage Processing Pipeline**:
+  1. **PDF Page Extraction**: Extracts specific pages from PDF reports
+  2. **Table Conversion**: Converts PDF tables to CSV using methods based on report format:
+     - Pre-2020 reports: Uses tabula-py for tabular data extraction
+     - Post-2020 reports: Uses AI (Grok API) for more accurate extraction of complex tables
+  3. **Data Processing**: Cleans, normalizes, and validates the extracted data
 - **Comprehensive Data Processing**:
   - Extracts both "All Home Types" and "Detached" property data
   - Preserves regional hierarchy information
@@ -20,11 +23,11 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 - **Economic Data Integration**:
   - Integrates key economic indicators (interest rates, employment, inflation, etc.)
   - Adds lagged indicators for time series analysis
-  - Creates enriched datasets ready for modeling
+  - Creates integrated datasets ready for modeling
 - **Command-Line Interface**:
-  - Run complete data pipeline with a single command
-  - Execute specific steps as needed (download, extract, process, enrich)
+  - Unified command structure with operation options (fetch, extract, both)
   - Configure validation and normalization options
+  - Support for skipping existing files to improve performance
 
 ## Installation
 
@@ -62,12 +65,22 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 ```
 trreb_data_extractor/
 ├── trreb/                    # Main package directory
-│   ├── downloader/           # PDF downloading module
-│   ├── extractor/            # PDF extraction module
-│   ├── processor/            # Data processing module
-│   ├── economic/             # Economic data integration
-│   ├── ml/                   # Machine learning module (placeholder)
+│   ├── services/             # Core services
+│   │   ├── fetcher/          # Downloads PDFs and extracts pages
+│   │   │   ├── downloader.py # Handles PDF downloads
+│   │   │   ├── identifier.py # Identifies page types in PDFs
+│   │   │   ├── extractor.py  # Extracts specific pages
+│   │   │   ├── report.py     # Generates summary reports
+│   │   │   └── facade.py     # High-level operations
+│   │   ├── csv_converter/    # Converts extracted PDF pages to CSV format
+│   │   ├── data_processor/   # Data cleaning, normalization, and validation
+│   │   └── economic/         # Economic data integration
 │   ├── cli/                  # Command-line interface
+│   │   ├── commands/         # Individual command modules
+│   │   │   ├── fetch.py      # Fetch command implementation (download/extract)
+│   │   │   ├── process.py    # Process command implementation
+│   │   │   └── economy.py    # Economy command implementation
+│   │   └── __main__.py       # CLI entry point
 │   └── utils/                # Utility functions
 │
 ├── data/                     # Data directory
@@ -77,8 +90,7 @@ trreb_data_extractor/
 │   └── economic/             # Economic indicator data
 │
 ├── docs/                     # Documentation
-├── scripts/                  # Standalone scripts
-└── tests/                    # Tests (future)
+└── tests/                    # Tests (removed)
 ```
 
 ## Usage
@@ -88,53 +100,73 @@ trreb_data_extractor/
 The package provides a unified command-line interface through the `trreb.cli` module. You can run the commands as follows:
 
 ```bash
-# Complete pipeline
-python -m trreb.cli pipeline
+# Download reports only
+python -m trreb.cli fetch fetch
 
-# Download reports
-python -m trreb.cli download
+# Extract pages from PDFs
+python -m trreb.cli fetch extract
 
-# Extract pages
-python -m trreb.cli extract
+# Download and extract in one operation
+python -m trreb.cli fetch both
 
 # Process extracted pages
 python -m trreb.cli process --type all_home_types --validate --normalize
 
-# Enrich data with economic indicators
-python -m trreb.cli enrich
+# Download/process/integrate economic indicators
+python -m trreb.cli economy
 ```
 
+> **Note**: The old `data` command is still available for backward compatibility but is deprecated.
+
+### Command Options
+
+#### Fetch Command
+
+```bash
+# Download reports from a specific year
+python -m trreb.cli fetch fetch --start-year 2020
+
+# Extract with overwrite option
+python -m trreb.cli fetch extract --overwrite
+
+# Extract a specific PDF
+python -m trreb.cli fetch extract --pdf data/pdfs/mw2301.pdf
+
+# Download and extract with detailed logging
+python -m trreb.cli fetch both --start-year 2020 --log-level DEBUG
+```
+
+#### Process and Economy Commands
+
+The process and economy commands remain unchanged from the previous version.
 
 #### Makefile
 
 The Makefile includes several useful targets:
 
 - **`make setup`**: Sets up the Python virtual environment and installs dependencies
-- **`make pipeline`**: Runs the full data pipeline (download, extract, process, enrich)
-- **`make download`**: Only downloads the TRREB PDFs
+- **`make fetch`**: Only downloads the TRREB PDFs
 - **`make extract`**: Only extracts the relevant pages
+- **`make fetch-extract`**: Downloads and extracts TRREB PDFs in one operation
 - **`make process`**: Only processes the extracted pages into CSVs
-- **`make enrich`**: Only enriches with economic indicators
+- **`make economy`**: Downloads/processes/integrates economic indicators
 - **`make clean`**: Cleans up generated files and directories
 - **`make lint`**: Runs linting tools (flake8, black, isort, mypy)
 - **`make format`**: Formats code using black and isort
-- **`make test`**: Runs tests
-- **`make docs`**: Generates documentation
-- **`make help`**: Shows available commands with descriptions
 
 #### Debugging
 
 To enable debug logging, use the `--log-level` parameter with any command:
 
 ```bash
-python -m trreb.cli download --log-level DEBUG
+python -m trreb.cli fetch fetch --log-level DEBUG
 ```
 
 Or when using make:
 
 ```bash
-# The download command already includes DEBUG level
-make download
+# The fetch command already includes DEBUG level
+make fetch
 
 # For other commands, use environment variables
 LOG_LEVEL=DEBUG make extract
@@ -144,13 +176,24 @@ Debug logs are helpful for troubleshooting issues with the data pipeline.
 
 ## Data Processing Pipeline
 
-1. **Download TRREB PDFs**: Download monthly market reports from the TRREB website.
-2. **Extract Relevant Pages**: Identify and extract pages containing "All Home Types" and "Detached" property data.
-3. **Process PDFs into CSV**: Convert PDF tables to structured CSV data using appropriate extraction method based on report date.
-4. **Normalize Data**: Standardize column names, region names, and data formats.
-5. **Validate Data**: Check for data quality issues, inconsistencies, and anomalies.
-6. **Integrate Economic Data**: Enrich real estate data with economic indicators.
-7. **Prepare for ML**: Create features and datasets ready for machine learning models.
+1. **Download and/or Extract TRREB Data**: Download monthly market reports from the TRREB website and extract relevant pages using the `fetch` command.
+   - `fetch` operation: Only downloads PDF files
+   - `extract` operation: Only extracts pages from existing PDFs
+   - `both` operation: Downloads PDFs and then extracts pages
+   - Checks for existing files to avoid redundant processing
+   - Supports overwrite mode via `--overwrite` flag
+
+2. **Convert PDFs to CSV**: Convert PDF tables to structured CSV data (via `csv_converter` module).
+   - Uses tabula-py for pre-2020 reports
+   - Uses AI (Grok API) for post-2020 reports
+
+3. **Process Data**: Clean, normalize, and validate the data (via `data_processor` module).
+   - Standardize column names, region names, and data formats
+   - Check for data quality issues, inconsistencies, and anomalies
+
+4. **Integrate Economic Data**: Integrate real estate data with economic indicators (via `economic` module).
+
+The new module structure creates a clear separation of concerns and makes the pipeline more efficient through smart file existence checks that avoid redundant processing.
 
 ## Economic Module
 
@@ -194,8 +237,8 @@ make economy
 ```
 
 Available CLI options for the `economy` command:
-- `--property-type [all_home_types|detached]`: Specify which property type dataset to integrate with (if available)
-- `--include-lags`: Include lagged economic indicators (default: true)
+- `--property-type [all_home_types|detached]`: Specify which property type dataset to integrate with (optional, needed for integration)
+- `--include-lags`: Include lagged economic indicators during integration (default: true)
 - `--force-download`: Force re-download of economic data even if cached data exists
 - `--log-level [DEBUG|INFO|WARNING|ERROR]`: Set logging level (default: INFO)
 
@@ -226,9 +269,9 @@ This will create the normalized TRREB data files that can be integrated with the
 
 2. **Master Dataset**: A combined dataset of all economic indicators in `master_economic_data.csv`.
 
-3. **Enriched Real Estate Data**: The TRREB data enriched with economic indicators in:
-   - `enriched_all_home_types.csv`: For all home types
-   - `enriched_detached.csv`: For detached homes
+3. **Integrated Real Estate Data**: The TRREB data integrated with economic indicators in:
+   - `integrated_economic_all_home_types.csv`: For all home types
+   - `integrated_economic_detached.csv`: For detached homes
 
 4. **Date Alignment**: All economic data is aligned with the TRREB data using a `date_str` column in the format 'YYYY-MM'.
 

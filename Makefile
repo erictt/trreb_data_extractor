@@ -1,4 +1,4 @@
-.PHONY: setup clean download extract process economy pipeline test lint format docs help
+.PHONY: setup clean fetch extract fetch-extract process economy lint format
 
 # Default Python interpreter
 PYTHON := python3
@@ -13,12 +13,6 @@ PDF_DIR := $(DATA_DIR)/pdfs
 EXTRACTED_DIR := $(DATA_DIR)/extracted
 PROCESSED_DIR := $(DATA_DIR)/processed
 ECONOMIC_DIR := $(DATA_DIR)/economic
-
-help:  ## Show this help message
-	@echo 'Usage: make [target]'
-	@echo ''
-	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 setup:  ## Set up Python virtual environment and install dependencies
 	@echo "Setting up TRREB Data Extractor environment..."
@@ -44,13 +38,17 @@ clean:  ## Remove generated files and directories
 	find . -type f -name "*.pyc" -delete
 	@echo "Cleanup complete!"
 
-download:  ## Download TRREB PDFs
+fetch:  ## Download TRREB PDFs only
 	@echo "Downloading TRREB PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli download --log-level DEBUG
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch fetch --log-level DEBUG
 
 extract:  ## Extract relevant pages from PDFs
 	@echo "Extracting pages from PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli extract
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch extract
+
+fetch-extract:  ## Download and extract TRREB PDFs in one operation
+	@echo "Downloading and extracting TRREB PDFs..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch both --log-level DEBUG
 
 process:  ## Process extracted pages into CSV format
 	@echo "Processing all home types data..."
@@ -61,10 +59,6 @@ process:  ## Process extracted pages into CSV format
 economy:  ## Download and process economic indicators data
 	@echo "Processing economic indicators data..."
 	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli economy
-
-pipeline:  ## Run complete data pipeline
-	@echo "Running full pipeline..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli pipeline
 
 lint:  ## Run linters (flake8, black, isort, mypy)
 	@echo "Running linters..."
@@ -78,20 +72,13 @@ format:  ## Format code using black and isort
 	@. $(VENV_ACTIVATE) && black trreb/
 	@. $(VENV_ACTIVATE) && isort trreb/
 
-test:  ## Run tests
-	@echo "Running tests..."
-	@. $(VENV_ACTIVATE) && pytest -xvs tests/
-
-docs:  ## Generate documentation
-	@echo "Generating documentation..."
-	@. $(VENV_ACTIVATE) && cd docs && make html
-
 # Create data directories
 $(PDF_DIR) $(EXTRACTED_DIR) $(PROCESSED_DIR) $(ECONOMIC_DIR):
 	@mkdir -p $@
 
 # Data directory dependencies
-download: $(PDF_DIR)
+fetch: $(PDF_DIR)
 extract: $(EXTRACTED_DIR)
+fetch-extract: $(PDF_DIR) $(EXTRACTED_DIR)
 process: $(PROCESSED_DIR)
 economy: $(ECONOMIC_DIR)

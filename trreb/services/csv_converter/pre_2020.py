@@ -1,5 +1,5 @@
 """
-Extractor for TRREB reports prior to January 2020.
+Table extractor for TRREB reports prior to January 2020.
 """
 
 import re
@@ -11,7 +11,7 @@ import tabula
 import warnings
 
 from trreb.config import COLUMN_NAME_MAPPING, REGION_NAME_MAPPING
-from trreb.extractor.base import BaseExtractor
+from trreb.services.csv_converter.base import TableExtractor
 from trreb.utils.logging import logger
 
 # Suppress annoying pandas warnings
@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=pd.errors.DtypeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-class Pre2020Extractor(BaseExtractor):
+class Pre2020TableExtractor(TableExtractor):
     """Extractor for TRREB reports before January 2020 using tabula-py."""
     
     def __init__(self, property_type: str):
