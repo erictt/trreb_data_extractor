@@ -3,6 +3,7 @@ Extractor for TRREB reports from January 2020 onwards using AI models.
 """
 
 import os
+from io import StringIO
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -71,7 +72,7 @@ class Post2020Extractor(BaseExtractor):
         
         # Convert CSV text to DataFrame
         try:
-            df = pd.read_csv(pd.StringIO(csv_text))
+            df = pd.read_csv(StringIO(csv_text))
             return df
         except Exception as e:
             logger.error(f"Error converting CSV text to DataFrame: {e}")

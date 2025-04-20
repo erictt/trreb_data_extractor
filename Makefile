@@ -1,4 +1,4 @@
-.PHONY: setup clean download extract process enrich pipeline test lint format docs help
+.PHONY: setup clean download extract process economy pipeline test lint format docs help
 
 # Default Python interpreter
 PYTHON := python3
@@ -58,9 +58,9 @@ process:  ## Process extracted pages into CSV format
 	@echo "Processing detached homes data..."
 	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli process --type detached --validate --normalize
 
-enrich:  ## Enrich processed data with economic indicators
-	@echo "Enriching data with economic indicators..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli enrich
+economy:  ## Download and process economic indicators data
+	@echo "Processing economic indicators data..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli economy
 
 pipeline:  ## Run complete data pipeline
 	@echo "Running full pipeline..."
@@ -94,4 +94,4 @@ $(PDF_DIR) $(EXTRACTED_DIR) $(PROCESSED_DIR) $(ECONOMIC_DIR):
 download: $(PDF_DIR)
 extract: $(EXTRACTED_DIR)
 process: $(PROCESSED_DIR)
-enrich: $(ECONOMIC_DIR)
+economy: $(ECONOMIC_DIR)

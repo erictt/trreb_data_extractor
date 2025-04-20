@@ -50,11 +50,12 @@ def print_command_help(command):
         logger.info("  --normalize        Normalize data after processing")
         logger.info("  --log-level LEVEL  Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
-    elif command == "enrich":
-        logger.info("Enrich processed data with economic indicators.")
+    elif command == "economy":
+        logger.info("Download and process economic indicators data.")
         logger.info("\nOptions:")
-        logger.info("  --property-type TYPE  Type of property to enrich: all_home_types or detached (default: both)")
+        logger.info("  --property-type TYPE  Type of property to integrate with: all_home_types or detached (default: both)")
         logger.info("  --include-lags        Include lagged economic indicators (default: true)")
+        logger.info("  --force-download      Force re-download of economic data even if cached data exists")
         logger.info("  --log-level LEVEL     Set logging level: DEBUG, INFO, WARNING, ERROR (default: INFO)")
     
     else:
@@ -71,7 +72,7 @@ def print_main_help():
     logger.info("  extract     Extract specific pages from TRREB PDFs")
     logger.info("  process     Process extracted pages into CSV format")
     logger.info("  pipeline    Run the complete data pipeline")
-    logger.info("  enrich      Enrich processed data with economic indicators")
+    logger.info("  economy     Download and process economic indicators data")
     logger.info("\nUse 'python -m trreb.cli COMMAND --help' for help on a specific command.")
 
 
@@ -123,22 +124,75 @@ def main():
         return run_pipeline()
     
     elif command == "enrich":
-        # Custom implementation for enrich command
+        # Redirect to economy command with a deprecation warning
+        logger.warning("The 'enrich' command is deprecated. Please use 'economy' instead.")
+        command = "economy"
+        # Fall through to the economy command
+    
+    elif command == "economy":
+        # Parse arguments for economy command
+        parser = argparse.ArgumentParser(description="Download and process economic indicators data.")
+        parser.add_argument("--property-type", choices=["all_home_types", "detached"], 
+                           help="Type of property to enrich (default: both)")
+        parser.add_argument("--include-lags", action="store_true", default=True,
+                           help="Include lagged economic indicators (default: true)")
+        parser.add_argument("--force-download", action="store_true", 
+                           help="Force download of economic data even if cached data exists")
+        parser.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], 
+                           default="INFO", help="Set the logging level")
+        
+        # Parse the arguments
+        args = parser.parse_args(sys.argv[2:])
+        
+        # Setup logger
+        from trreb.utils.logging import setup_logger, logger
+        setup_logger("trreb", level=args.log_level)
+        
         try:
             # Import functionality
-            from trreb.economic.integration import enrich_all_datasets
+            from trreb.economic.integration import enrich_trreb_data, enrich_all_datasets, prepare_economic_data
+            from trreb.config import PROCESSED_DIR
             
-            logger.info("Enriching all datasets with economic indicators...")
-            enriched_data = enrich_all_datasets()
+            # Check if normalized TRREB data exists
+            if args.property_type:
+                trreb_paths = [PROCESSED_DIR / f"normalized_{args.property_type}.csv"]
+            else:
+                trreb_paths = [
+                    PROCESSED_DIR / "normalized_all_home_types.csv",
+                    PROCESSED_DIR / "normalized_detached.csv"
+                ]
             
-            # Print statistics for enriched datasets
-            for property_type, df in enriched_data.items():
-                logger.info(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+            trreb_data_exists = any(path.exists() for path in trreb_paths)
             
-            logger.info("Enrichment complete!")
+            if not trreb_data_exists:
+                # If no TRREB data exists, just download and prepare economic data
+                logger.info("No normalized TRREB data found. Downloading economic data only...")
+                econ_df = prepare_economic_data(force_download=args.force_download)
+                logger.info(f"Economic data downloaded and prepared with {len(econ_df)} rows and {len(econ_df.columns)} columns")
+            else:
+                # TRREB data exists, proceed with enrichment
+                if args.property_type:
+                    # Enrich specific property type
+                    logger.info(f"Enriching {args.property_type} dataset with economic indicators...")
+                    df = enrich_trreb_data(args.property_type, include_lags=args.include_lags, 
+                                         force_download=args.force_download)
+                    if not df.empty:
+                        logger.info(f"Enriched {args.property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+                else:
+                    # Enrich all datasets
+                    logger.info("Enriching all datasets with economic indicators...")
+                    enriched_data = enrich_all_datasets(include_lags=args.include_lags, 
+                                                      force_download=args.force_download)
+                    
+                    # Print statistics for enriched datasets
+                    for property_type, df in enriched_data.items():
+                        if not df.empty:
+                            logger.info(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+            
+            logger.info("Economic data processing complete!")
             return 0
         except Exception as e:
-            logger.error(f"Error during enrichment: {e}", exception=e)
+            logger.error(f"Error during enrichment: {e}")
             return 1
     
     else:

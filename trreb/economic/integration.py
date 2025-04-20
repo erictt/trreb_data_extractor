@@ -40,6 +40,91 @@ def load_economic_data(force_download: bool = False) -> Dict[str, pd.DataFrame]:
     return economic_data
 
 
+def verify_data_format(df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
+    """
+    Verify and correct the data format to match expected CSV structure.
+    
+    Args:
+        df: DataFrame to verify
+        dataset_name: Name of the dataset for logging
+        
+    Returns:
+        DataFrame with verified format
+    """
+    if df.empty:
+        logger.warning(f"Empty DataFrame for {dataset_name}")
+        return df
+    
+    # Check for required columns
+    required_cols = ["year", "month", "date_str"]
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        logger.warning(f"Missing required columns in {dataset_name}: {missing_cols}")
+        # Try to create missing columns if possible
+        if "date_str" in df.columns and "year" not in df.columns:
+            df["year"] = df["date_str"].str.split("-").str[0]
+        if "date_str" in df.columns and "month" not in df.columns:
+            df["month"] = df["date_str"].str.split("-").str[1]
+    
+    # Verify data types
+    if "year" in df.columns:
+        df["year"] = pd.to_numeric(df["year"], errors="coerce").astype("Int64")
+    if "month" in df.columns:
+        df["month"] = pd.to_numeric(df["month"], errors="coerce").astype("Int64")
+    
+    # Check for date_str format (YYYY-MM)
+    if "date_str" in df.columns:
+        invalid_format = ~df["date_str"].str.match(r"^\d{4}-\d{2}$")
+        invalid_count = invalid_format.sum()
+        if invalid_count > 0:
+            logger.warning(f"Found {invalid_count} invalid date_str format in {dataset_name}")
+            # Try to fix if possible
+            if "year" in df.columns and "month" in df.columns:
+                mask = invalid_format
+                df.loc[mask, "date_str"] = (
+                    df.loc[mask, "year"].astype(str) + "-" + 
+                    df.loc[mask, "month"].astype(str).str.zfill(2)
+                )
+    
+    # Log verification results
+    logger.info(f"Verified {dataset_name} format: {len(df)} rows, {', '.join(df.columns)} columns")
+    return df
+
+
+def prepare_economic_data(force_download: bool = False) -> pd.DataFrame:
+    """
+    Prepare economic data for integration with TRREB data.
+    This function can be run independently to download and prepare economic data
+    even if TRREB data isn't available yet.
+    
+    Args:
+        force_download: Whether to force download of economic data
+        
+    Returns:
+        DataFrame containing the master economic dataset
+    """
+    # Load or create master economic dataset
+    econ_path = ECONOMIC_DIR / 'master_economic_data.csv'
+    if econ_path.exists() and not force_download:
+        try:
+            logger.info(f"Loading existing economic data from {econ_path}")
+            econ_df = pd.read_csv(econ_path)
+            # Verify the format of the loaded data
+            econ_df = verify_data_format(econ_df, "master_economic_data")
+        except Exception as e:
+            logger.error(f"Error loading master economic data: {e}")
+            econ_df = create_master_economic_dataset()
+    else:
+        # Force re-download of economic data
+        if force_download:
+            logger.info("Forcing download of economic data...")
+        else:
+            logger.info("No existing economic data found. Downloading...")
+        econ_df = create_master_economic_dataset()
+    
+    return econ_df
+
+
 def create_master_economic_dataset() -> pd.DataFrame:
     """
     Create a master dataset of all economic indicators.
@@ -67,22 +152,64 @@ def create_master_economic_dataset() -> pd.DataFrame:
             logger.warning(f"'date_str' column not found in {name}, skipping")
             continue
         
+        # Log the merge operation
+        logger.info(f"Merging {name} data with {len(df)} rows")
+        
+        # Before merging, check for duplicate date_str values
+        duplicates = df['date_str'].duplicated().sum()
+        if duplicates > 0:
+            logger.warning(f"Found {duplicates} duplicate date_str values in {name}")
+            # Keep only the last occurrence of each date_str
+            df = df.drop_duplicates(subset=['date_str'], keep='last')
+        
         # Merge on 'date_str'
+        before_rows = len(master_df)
         master_df = pd.merge(master_df, df, on='date_str', how='outer', suffixes=('', f'_{name}'))
+        after_rows = len(master_df)
+        
+        logger.info(f"After merging {name}: {before_rows} rows -> {after_rows} rows")
     
     # Sort by date
     if 'date_str' in master_df.columns:
         master_df = master_df.sort_values('date_str')
+    
+    # Ensure consistent data types across columns
+    # Make sure we have the key columns: year, month, date_str
+    if 'year' in master_df.columns and 'month' in master_df.columns:
+        master_df['year'] = master_df['year'].astype('Int64')
+        master_df['month'] = master_df['month'].astype('Int64')
+    else:
+        # If year/month columns are missing, create them from date_str
+        try:
+            master_df['year'] = master_df['date_str'].str.split('-').str[0].astype('Int64')
+            master_df['month'] = master_df['date_str'].str.split('-').str[1].astype('Int64')
+        except Exception as e:
+            logger.error(f"Could not create year/month columns from date_str: {e}")
+    
+    # Check for and handle duplicate date_str in master dataset
+    duplicates = master_df['date_str'].duplicated().sum()
+    if duplicates > 0:
+        logger.warning(f"Found {duplicates} duplicate date_str values in master dataset")
+        # Keep only the last occurrence of each date_str
+        master_df = master_df.drop_duplicates(subset=['date_str'], keep='last')
     
     # Save the master dataset
     output_path = ECONOMIC_DIR / 'master_economic_data.csv'
     master_df.to_csv(output_path, index=False)
     logger.info(f"Master economic dataset saved to {output_path}")
     
+    # Log summary statistics for verification
+    logger.info(f"Master economic dataset shape: {master_df.shape}")
+    logger.info(f"Date range: {master_df['date_str'].min()} to {master_df['date_str'].max() if not master_df.empty else 'N/A'}")
+    logger.info(f"Number of indicators: {len(master_df.columns) - 1}")  # -1 for date_str column
+    logger.info(f"Master economic data columns: {', '.join(master_df.columns)}")
+    logger.info(f"Master economic data dtypes:\n{master_df.dtypes}")
+    logger.info(f"Sample master economic data:\n{master_df.head(3) if not master_df.empty else 'Empty DataFrame'}")
+    
     return master_df
 
 
-def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12]) -> pd.DataFrame:
+def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> pd.DataFrame:
     """
     Enrich TRREB data with economic indicators.
     
@@ -90,14 +217,22 @@ def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods
         property_type: Type of property (all_home_types or detached)
         include_lags: Whether to include lagged economic indicators
         lag_periods: List of lag periods to include
+        force_download: Whether to force download of economic data
         
     Returns:
         DataFrame containing enriched TRREB data
     """
     # Load normalized TRREB data
     trreb_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
+    
+    # First, create economic data even if TRREB data doesn't exist yet
+    # This allows users to download economic data separately
+    econ_df = prepare_economic_data(force_download)
+    
     if not trreb_path.exists():
-        logger.error(f"Normalized TRREB data not found at {trreb_path}")
+        logger.warning(f"Normalized TRREB data not found at {trreb_path}")
+        logger.info(f"Economic data has been downloaded and prepared, but no TRREB data to enrich.")
+        logger.info(f"You can find the economic data at {ECONOMIC_DIR}/master_economic_data.csv")
         return pd.DataFrame()
     
     try:
@@ -126,16 +261,7 @@ def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods
         logger.error(f"Error loading TRREB data: {e}")
         return pd.DataFrame()
     
-    # Load or create master economic dataset
-    econ_path = ECONOMIC_DIR / 'master_economic_data.csv'
-    if econ_path.exists():
-        try:
-            econ_df = pd.read_csv(econ_path)
-        except Exception as e:
-            logger.error(f"Error loading master economic data: {e}")
-            econ_df = create_master_economic_dataset()
-    else:
-        econ_df = create_master_economic_dataset()
+    # Get pre-prepared economic data (already handled at the beginning of the function)
     
     if econ_df.empty:
         logger.error("No economic data available")
@@ -190,7 +316,7 @@ def enrich_trreb_data(property_type: str, include_lags: bool = True, lag_periods
     return enriched_df
 
 
-def enrich_all_datasets(include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12]) -> Dict[str, pd.DataFrame]:
+def enrich_all_datasets(include_lags: bool = True, lag_periods: List[int] = [1, 3, 6, 12], force_download: bool = False) -> Dict[str, pd.DataFrame]:
     """
     Enrich all TRREB datasets with economic indicators.
     
@@ -206,7 +332,7 @@ def enrich_all_datasets(include_lags: bool = True, lag_periods: List[int] = [1, 
     
     for property_type in property_types:
         try:
-            df = enrich_trreb_data(property_type, include_lags, lag_periods)
+            df = enrich_trreb_data(property_type, include_lags, lag_periods, force_download)
             if not df.empty:
                 enriched_data[property_type] = df
                 logger.info(f"Enriched {property_type} dataset with {len(df)} rows")

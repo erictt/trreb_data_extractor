@@ -73,9 +73,19 @@ class EconomicDataSource(ABC):
             logger.info(f"Using cached data for {self.name}")
             try:
                 df = pd.read_csv(self.cache_file)
+                
+                # Verify essential columns exist
+                required_cols = ["year", "month", "date_str"]
+                missing_cols = [col for col in required_cols if col not in df.columns]
+                if missing_cols:
+                    logger.warning(f"Cached data for {self.name} is missing columns: {missing_cols}")
+                    raise ValueError(f"Cached data format invalid, missing: {missing_cols}")
+                
+                logger.info(f"Loaded {len(df)} rows for {self.name} from cache")
                 return df
             except Exception as e:
                 logger.error(f"Error reading cached data for {self.name}: {e}")
+                logger.info(f"Falling back to downloading for {self.name}")
                 # Fall back to downloading
         
         # Download and preprocess data
@@ -85,12 +95,27 @@ class EconomicDataSource(ABC):
         if df is not None and not df.empty:
             df = self.preprocess(df)
             
+            # Verify essential columns exist before caching
+            required_cols = ["year", "month", "date_str"]
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                logger.error(f"Processed data for {self.name} is missing required columns: {missing_cols}")
+                # Try to fix if possible
+                if "date_str" in df.columns and "year" not in df.columns:
+                    df["year"] = df["date_str"].str.split("-").str[0].astype("Int64")
+                if "date_str" in df.columns and "month" not in df.columns:
+                    df["month"] = df["date_str"].str.split("-").str[1].astype("Int64")
+            
             # Cache data
             try:
                 df.to_csv(self.cache_file, index=False)
-                logger.info(f"Cached data for {self.name} to {self.cache_file}")
+                logger.info(f"Cached {len(df)} rows of data for {self.name} to {self.cache_file}")
             except Exception as e:
                 logger.error(f"Error caching data for {self.name}: {e}")
+        else:
+            logger.warning(f"No data available from {self.name} source")
+            # Return an empty DataFrame with the required columns
+            df = pd.DataFrame(columns=["year", "month", "date_str"])
         
         return df
 
@@ -137,10 +162,39 @@ class BankOfCanadaRates(EconomicDataSource):
             prime_df = pd.DataFrame(prime_obs)
             mortgage_df = pd.DataFrame(mortgage_obs)
             
-            # Rename columns for clarity
-            overnight_df = overnight_df.rename(columns={"d": "date", "V39079": {"v": "overnight_rate"}})
-            prime_df = prime_df.rename(columns={"d": "date", "V80691311": {"v": "prime_rate"}})
-            mortgage_df = mortgage_df.rename(columns={"d": "date", "V122521": {"v": "mortgage_5yr_rate"}})
+            # Extract observations with proper value access
+            # The Bank of Canada API returns JSON in this format:
+            # {"observations": [{"d": "2000-01-01", "V39079": {"v": "5.75"}, ...}, ...]}
+            
+            # For overnight rate
+            overnight_df = pd.DataFrame()
+            try:
+                overnight_df["date"] = [item["d"] for item in overnight_obs]
+                overnight_df["overnight_rate"] = [item["V39079"]["v"] for item in overnight_obs]
+            except (KeyError, TypeError) as e:
+                logger.error(f"Error parsing overnight rate data: {e}")
+                logger.debug(f"Sample overnight data: {overnight_obs[:1] if overnight_obs else 'No data'}")
+                overnight_df = pd.DataFrame(columns=["date", "overnight_rate"])
+            
+            # For prime rate
+            prime_df = pd.DataFrame()
+            try:
+                prime_df["date"] = [item["d"] for item in prime_obs]
+                prime_df["prime_rate"] = [item["V80691311"]["v"] for item in prime_obs]
+            except (KeyError, TypeError) as e:
+                logger.error(f"Error parsing prime rate data: {e}")
+                logger.debug(f"Sample prime data: {prime_obs[:1] if prime_obs else 'No data'}")
+                prime_df = pd.DataFrame(columns=["date", "prime_rate"])
+            
+            # For mortgage rate
+            mortgage_df = pd.DataFrame()
+            try:
+                mortgage_df["date"] = [item["d"] for item in mortgage_obs]
+                mortgage_df["mortgage_5yr_rate"] = [item["V122521"]["v"] for item in mortgage_obs]
+            except (KeyError, TypeError) as e:
+                logger.error(f"Error parsing mortgage rate data: {e}")
+                logger.debug(f"Sample mortgage data: {mortgage_obs[:1] if mortgage_obs else 'No data'}")
+                mortgage_df = pd.DataFrame(columns=["date", "mortgage_5yr_rate"])
             
             # Merge DataFrames on date
             rates_df = pd.merge(overnight_df, prime_df, on="date", how="outer")
@@ -161,17 +215,27 @@ class BankOfCanadaRates(EconomicDataSource):
         Returns:
             Preprocessed DataFrame
         """
+        if df.empty:
+            logger.warning("Empty DataFrame passed to preprocess for Bank of Canada data")
+            # Create a minimal DataFrame with required columns
+            return pd.DataFrame(columns=["year", "month", "date", "overnight_rate", 
+                                        "prime_rate", "mortgage_5yr_rate", "date_str"])
+        
         # Convert date to datetime
-        df["date"] = pd.to_datetime(df["date"])
+        df["date"] = pd.to_datetime(df["date"], errors='coerce')
+        
+        # Drop rows with invalid dates
+        invalid_dates = df["date"].isna().sum()
+        if invalid_dates > 0:
+            logger.warning(f"Dropping {invalid_dates} rows with invalid dates")
+            df = df.dropna(subset=["date"])
         
         # Sort by date
         df = df.sort_values("date")
         
-        # Convert rates to numeric
+        # Keep the rates as strings to match the expected format
+        # This is important because in the CSV info provided, rates are strings
         rate_cols = ["overnight_rate", "prime_rate", "mortgage_5yr_rate"]
-        for col in rate_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors="coerce")
         
         # Add year and month columns
         df["year"] = df["date"].dt.year
@@ -182,6 +246,20 @@ class BankOfCanadaRates(EconomicDataSource):
         
         # Create date in YYYY-MM format
         monthly_df["date_str"] = monthly_df["year"].astype(str) + "-" + monthly_df["month"].astype(str).str.zfill(2)
+        
+        # Verify data types match the expected CSV format
+        monthly_df["year"] = monthly_df["year"].astype("Int64")  # Integer
+        monthly_df["month"] = monthly_df["month"].astype("Int64")  # Integer
+        monthly_df["date"] = monthly_df["date"].dt.strftime('%Y-%m-%d')  # String
+        
+        # Ensure rates are strings
+        for col in rate_cols:
+            if col in monthly_df.columns:
+                monthly_df[col] = monthly_df[col].astype(str)
+        
+        # Print sample data and column dtypes for verification
+        logger.info(f"Bank of Canada data dtypes:\n{monthly_df.dtypes}")
+        logger.info(f"Sample Bank of Canada data:\n{monthly_df.head(3)}")
         
         return monthly_df
 
@@ -270,6 +348,21 @@ class StatisticsCanadaEconomic(EconomicDataSource):
         Returns:
             Preprocessed DataFrame
         """
+        if df.empty:
+            logger.warning("Empty DataFrame passed to preprocess for Statistics Canada data")
+            # Create minimal DataFrame with required columns
+            return pd.DataFrame(columns=["year", "month", "date", "cpi_all_items", 
+                                        "cpi_housing", "new_housing_price_index", "date_str"])
+        
+        # Ensure date is in proper datetime format
+        df["date"] = pd.to_datetime(df["date"], errors='coerce')
+        
+        # Drop rows with invalid dates
+        invalid_dates = df["date"].isna().sum()
+        if invalid_dates > 0:
+            logger.warning(f"Dropping {invalid_dates} rows with invalid dates")
+            df = df.dropna(subset=["date"])
+        
         # Sort by date
         df = df.sort_values("date")
         
@@ -287,6 +380,30 @@ class StatisticsCanadaEconomic(EconomicDataSource):
         
         # Create date in YYYY-MM format
         df["date_str"] = df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2)
+        
+        # Fix data types to match expected format
+        df["year"] = df["year"].astype("Int64")  # Integer
+        df["month"] = df["month"].astype("Int64")  # Integer
+        df["date"] = df["date"].dt.strftime('%Y-%m-%d')  # String
+        
+        # Convert numeric columns to appropriate types
+        numeric_cols = ["cpi_all_items", "cpi_housing", "new_housing_price_index",
+                       "unemployment_rate_ontario", "unemployment_rate_toronto"]
+        
+        for col in numeric_cols:
+            if col in df.columns:
+                # First convert to float for calculation, then to string for storage
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+        # YoY change columns should also be numeric
+        yoy_cols = [col for col in df.columns if col.endswith('_yoy_change')]
+        for col in yoy_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Print sample data and column dtypes for verification
+        logger.info(f"Statistics Canada data dtypes:\n{df.dtypes}")
+        logger.info(f"Sample Statistics Canada data:\n{df.head(3)}")
         
         return df
 
@@ -337,8 +454,29 @@ class CMHCHousingData(EconomicDataSource):
         Returns:
             Preprocessed DataFrame
         """
+        if df.empty:
+            logger.warning("Empty DataFrame passed to preprocess for CMHC housing data")
+            # Create minimal DataFrame with required columns
+            return pd.DataFrame(columns=["year", "month", "date", "housing_starts_gta",
+                                       "housing_completions_gta", "under_construction_gta", "date_str"])
+        
+        # Ensure date is in proper datetime format
+        df["date"] = pd.to_datetime(df["date"], errors='coerce')
+        
+        # Drop rows with invalid dates
+        invalid_dates = df["date"].isna().sum()
+        if invalid_dates > 0:
+            logger.warning(f"Dropping {invalid_dates} rows with invalid dates")
+            df = df.dropna(subset=["date"])
+        
         # Sort by date
         df = df.sort_values("date")
+        
+        # Ensure numeric columns are actually numeric before calculations
+        numeric_cols = ["housing_starts_gta", "housing_completions_gta", "under_construction_gta"]
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
         
         # Calculate rolling 3-month average for housing starts
         df["housing_starts_gta_3m_avg"] = df["housing_starts_gta"].rolling(window=3).mean()
@@ -356,6 +494,15 @@ class CMHCHousingData(EconomicDataSource):
         
         # Create date in YYYY-MM format
         df["date_str"] = df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2)
+        
+        # Fix data types to match expected format
+        df["year"] = df["year"].astype("Int64")  # Integer
+        df["month"] = df["month"].astype("Int64")  # Integer
+        df["date"] = df["date"].dt.strftime('%Y-%m-%d')  # String
+        
+        # Print sample data and column dtypes for verification
+        logger.info(f"CMHC Housing data dtypes:\n{df.dtypes}")
+        logger.info(f"Sample CMHC Housing data:\n{df.head(3)}")
         
         return df
 

@@ -77,13 +77,24 @@ def main():
         logger.info("=== Processing Detached Homes ===")
         process_type("detached", args.validate, args.normalize)
     
-    # 4. Integrate economic data if not skipped
+    # 4. Download economic data if not skipped
     if not args.skip_economic:
-        logger.info("=== Integrating Economic Data ===")
-        enriched_data = enrich_all_datasets()
+        logger.info("=== Downloading Economic Data ===")
+        from trreb.economic.integration import prepare_economic_data, enrich_all_datasets
         
-        for property_type, df in enriched_data.items():
-            logger.info(f"Enriched {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+        # First, prepare economic data
+        econ_df = prepare_economic_data(force_download=False)
+        logger.info(f"Economic data prepared with {len(econ_df)} rows and {len(econ_df.columns)} columns")
+        
+        # Then try to integrate with TRREB data if available
+        try:
+            enriched_data = enrich_all_datasets(include_lags=True)
+            for property_type, df in enriched_data.items():
+                if not df.empty:
+                    logger.info(f"Integrated {property_type} dataset with {len(df)} rows and {len(df.columns)} columns")
+        except Exception as e:
+            logger.warning(f"Could not integrate economic data with TRREB data: {e}")
+            logger.info("Economic data has been prepared but not integrated. Continue with pipeline...")
     
     logger.info("=== Pipeline Complete ===")
     return 0
