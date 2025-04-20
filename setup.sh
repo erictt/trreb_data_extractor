@@ -21,12 +21,15 @@ fi
 # Activate virtual environment
 source .venv/bin/activate
 
-# Upgrade pip
-pip install --upgrade pip
+# Check if uv is installed
+if ! command -v uv &> /dev/null; then
+    echo "uv is not installed. Installing uv..."
+    curl -sSf https://install.determinate.systems/uv | sh
+fi
 
 # Install the package in development mode
-echo "Installing package in development mode..."
-pip install -e .
+echo "Installing dependencies..."
+uv pip install -e .
 
 # Create required directories
 echo "Creating data directories..."
@@ -39,7 +42,7 @@ mkdir -p data/economic
 
 # Install additional development dependencies
 echo "Installing development dependencies..."
-pip install pytest black flake8 isort mypy
+uv pip install pytest black flake8 isort mypy
 
 echo ""
 echo "Setup complete! Activate the virtual environment with:"

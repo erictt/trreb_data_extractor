@@ -30,8 +30,8 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 
 ### Prerequisites
 
-- Python 3.8+
-- Required Python packages (see `requirements.txt`)
+- Python 3.11+
+- Required Python packages (see `pyproject.toml`)
 - For reports from January 2020 onwards: xAI API key (for Grok models)
 
 ### Setup
@@ -45,6 +45,11 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 2. Run the setup script to create a virtual environment and install dependencies:
    ```bash
    ./setup.sh
+   ```
+   
+   The setup script uses `uv` for faster dependency installation. If you don't have `uv` installed, you can install it with:
+   ```bash
+   curl -sSf https://install.determinate.systems/uv | sh
    ```
 
 3. Create a `.env` file with your API key (for processing reports from January 2020 onwards):

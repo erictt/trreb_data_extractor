@@ -164,6 +164,7 @@ def process():
           f"({successful_files / total_files * 100:.1f}%)")
     
     # Validate and normalize if requested
+    normalized_path = None
     if args.validate or args.normalize:
         # Combine all processed CSVs
         all_data = []
@@ -250,13 +251,16 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
         property_type: Type of property (all_home_types or detached)
         validate: Whether to validate the data
         normalize: Whether to normalize the data
+        
+    Returns:
+        Path to normalized data file if normalize=True, otherwise None
     """
     # Get all extracted files
     extracted_files = get_all_extracted_paths(property_type)
     
     if not extracted_files:
         print(f"No extracted files found for property type '{property_type}'.")
-        return
+        return None
     
     # Process each file
     results = []
@@ -293,6 +297,7 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
           f"({successful_files / total_files * 100:.1f}%)")
     
     # Validate and normalize if requested
+    normalized_path = None
     if validate or normalize:
         # Combine all processed CSVs
         all_data = []
@@ -309,7 +314,7 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
         
         if not all_data:
             print("No data to validate or normalize.")
-            return
+            return None
         
         combined_df = pd.concat(all_data, ignore_index=True)
         
@@ -329,3 +334,19 @@ def process_type(property_type: str, validate: bool = False, normalize: bool = F
             normalized_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
             normalized_df.to_csv(normalized_path, index=False)
             print(f"Normalized data saved to {normalized_path}")
+    
+    return normalized_path
+
+
+# Register commands in the __all__ list
+__all__ = [
+    "download",
+    "extract_pages",
+    "process",
+    "run_pipeline",
+    "process_type"
+]
+
+# Update the package __all__ list
+import trreb.cli
+trreb.cli.__all__ = __all__

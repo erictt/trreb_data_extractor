@@ -2,16 +2,7 @@
 Command-line interface package for TRREB data extractor.
 """
 
-from trreb.cli.commands import (
-    download,
-    extract_pages,
-    process,
-    run_pipeline,
-)
+# Do not import from trreb.cli.commands here to avoid circular imports
+# Instead, import modules only when needed or use lazy imports
 
-__all__ = [
-    "download",
-    "extract_pages",
-    "process",
-    "run_pipeline",
-]
+__all__ = []  # Will be populated by commands.py

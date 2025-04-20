@@ -15,6 +15,8 @@ from trreb.processor.normalization import normalize_dataset
 from trreb.processor.validation import generate_validation_report
 from trreb.economic.integration import enrich_trreb_data, enrich_all_datasets
 
+# Import CLI commands only when needed to avoid circular imports
+
 # Define high-level convenience functions
 def download_data(start_year=None):
     """
@@ -49,6 +51,7 @@ def process_data(property_type, validate=True, normalize=True):
     Returns:
         Path to the processed data file
     """
+    # Import here to avoid circular imports
     from trreb.cli.commands import process_type
     return process_type(property_type, validate, normalize)
 

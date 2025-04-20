@@ -14,7 +14,7 @@ import pandas as pd
 # Add the parent directory to the Python path to allow importing trreb package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from trreb.cli.commands import process_type
+# Import dependencies here to avoid circular imports
 from trreb.downloader.trreb_downloader import download_reports
 from trreb.economic.integration import enrich_all_datasets
 from trreb.extractor.page_extractor import PageExtractor
@@ -69,6 +69,9 @@ def main():
     
     # 3. Process CSVs if not skipped
     if not args.skip_process:
+        # Import process_type here to avoid circular imports
+        from trreb.cli.commands import process_type
+        
         logger.info("=== Processing All Home Types ===")
         process_type("all_home_types", args.validate, args.normalize)
         
