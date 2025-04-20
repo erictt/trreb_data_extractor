@@ -175,13 +175,6 @@ The TRREB data presents several challenges:
 
 See [data_complexity.md](docs/data_complexity.md) for a detailed explanation of these challenges and how they are addressed.
 
-## Documentation
-
-- [data_complexity.md](docs/data_complexity.md) - Details on TRREB data structure and challenges
-- [economic_indicators.md](docs/economic_indicators.md) - Information on economic indicators and their integration
-- [refactoring.md](docs/refactoring.md) - Documentation of the code restructuring process
-- [general_prompt.md](docs/general_prompt.md) - General prompt template for AI-assisted development
-
 ## Future Development
 
 Planned enhancements include:
