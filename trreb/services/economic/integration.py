@@ -28,10 +28,11 @@ def load_economic_data(force_download: bool = False) -> Dict[str, pd.DataFrame]:
 
     for source in data_sources:
         try:
+            logger.info(f"Loading data from {source.name}")
             df = source.get_data(force_download=force_download)
             if df is not None and not df.empty:
                 economic_data[source.name] = df
-                logger.info(f"Loaded {len(df)} rows from {source.name}")
+                logger.info(f"Successfully loaded {len(df)} rows from {source.name}")
             else:
                 logger.warning(f"No data loaded from {source.name}")
         except Exception as e:
@@ -116,7 +117,12 @@ def prepare_economic_data(force_download: bool = False) -> pd.DataFrame:
             econ_df = pd.read_csv(econ_path)
             # Verify the format of the loaded data
             econ_df = verify_data_format(econ_df, "master_economic_data")
-
+            
+            # Check if the data includes 2015 records
+            if "date_str" in econ_df.columns:
+                if not any(econ_df["date_str"].str.startswith("2015")):
+                    logger.info("Existing economic data doesn't include 2015 records. Forcing re-download.")
+                    econ_df = create_master_economic_dataset()
         except Exception as e:
             logger.error(f"Error loading master economic data: {e}")
             econ_df = create_master_economic_dataset()
@@ -139,9 +145,8 @@ def create_master_economic_dataset() -> pd.DataFrame:
         DataFrame containing all economic indicators
     """
     # Load all economic data
-    economic_data = load_economic_data(
-        force_download=True
-    )  # Force download to get the 2015 data
+    logger.info("Creating master economic dataset from all sources...")
+    economic_data = load_economic_data(force_download=True)  # Force download to get the latest data
 
     if not economic_data:
         logger.error("No economic data sources loaded")
@@ -149,6 +154,7 @@ def create_master_economic_dataset() -> pd.DataFrame:
 
     # Start with the first data source
     master_df = next(iter(economic_data.values())).copy()
+    logger.info(f"Starting with {len(master_df)} rows from {next(iter(economic_data.keys()))}")
 
     # Merge with other data sources
     for name, df in economic_data.items():
@@ -220,8 +226,8 @@ def create_master_economic_dataset() -> pd.DataFrame:
         f"Date range: {master_df['date_str'].min()} to {master_df['date_str'].max() if not master_df.empty else 'N/A'}"
     )
     logger.info(
-        f"Number of indicators: {len(master_df.columns) - 1}"
-    )  # -1 for date_str column
+        f"Number of indicators: {len(master_df.columns) - 3}"
+    )  # -3 for date_str, year, month columns
     logger.info(f"Master economic data columns: {', '.join(master_df.columns)}")
     logger.info(f"Master economic data dtypes:\n{master_df.dtypes}")
     logger.info(
@@ -280,9 +286,11 @@ def integrate_economic_data(
     if include_lags:
         # Identify numeric columns to lag
         numeric_cols = econ_df.select_dtypes(include=["number"]).columns
+        logger.info(f"Creating lag features for {len(numeric_cols)} numeric columns")
 
         # For each lag period, create lagged features
         for lag in lag_periods:
+            logger.info(f"Creating lag-{lag} features")
             # Create a copy of the economic data shifted by the lag period
             lag_df = econ_df.copy()
 
@@ -313,6 +321,7 @@ def integrate_economic_data(
                         logger.error(f"Error creating lag feature {lag_col}: {e}")
 
     # Merge TRREB data with economic data
+    logger.info(f"Merging TRREB {property_type} data with economic indicators")
     enriched_df = pd.merge(
         trreb_df, econ_df, on="date_str", how="left", suffixes=("", "_econ")
     )
@@ -326,6 +335,7 @@ def integrate_economic_data(
         )
     ]
     enriched_df = enriched_df[cols_to_keep]
+    logger.info(f"Final integrated dataset has {len(enriched_df)} rows and {len(enriched_df.columns)} columns")
 
     # Save the integrated dataset
     output_path = PROCESSED_DIR / f"integrated_economic_{property_type}.csv"
@@ -356,12 +366,13 @@ def integrate_economic_data_all(
 
     for property_type in property_types:
         try:
+            logger.info(f"Integrating economic data with {property_type} property type")
             df = integrate_economic_data(
                 property_type, include_lags, lag_periods, force_download
             )
             if not df.empty:
                 integrated_data[property_type] = df
-                logger.info(f"Integrated {property_type} dataset with {len(df)} rows")
+                logger.info(f"Successfully integrated {property_type} dataset with {len(df)} rows")
             else:
                 logger.warning(f"No integrated data created for {property_type}")
         except Exception as e:
