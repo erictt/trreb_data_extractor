@@ -5,14 +5,12 @@ This command handles the normalization of CSV data.
 
 import argparse
 import pandas as pd
-from pathlib import Path
 from tqdm import tqdm
 
 from trreb.config import PROCESSED_DIR
-from trreb.services.data_processor.normalization import normalize_dataset
-from trreb.services.data_processor.validation import generate_validation_report
+from trreb.services.normalizer.normalization import normalize_dataset
+from trreb.services.normalizer.validation import generate_validation_report
 from trreb.utils.logging import logger
-from trreb.utils.paths import get_output_paths
 
 
 def normalize(args: argparse.Namespace):
@@ -230,4 +228,3 @@ def normalize_type(
     else:
         logger.error("No valid data to normalize after processing files.")
         return None
-

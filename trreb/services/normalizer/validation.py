@@ -8,14 +8,8 @@ from typing import List, Optional, Dict, Union
 
 from trreb.config import (
     ALL_REGIONS,
-    PRE_2020_ALL_HOME_COLUMNS,
-    PRE_2020_DETACHED_COLUMNS,
-    MID_PERIOD_ALL_HOME_COLUMNS,
-    MID_PERIOD_DETACHED_COLUMNS,
-    POST_2022_ALL_HOME_COLUMNS,
-    POST_2022_DETACHED_COLUMNS
 )
-from trreb.services.data_processor.normalization import determine_period, get_expected_columns
+from .normalization import determine_period, get_expected_columns
 
 
 class ValidationResult:
@@ -133,8 +127,10 @@ def validate_regions(df: pd.DataFrame, region_col: str = None) -> ValidationResu
 
 
 def validate_numeric_columns(
-    df: pd.DataFrame, expected_columns: Optional[List[str]] = None,
-    date_str: Optional[str] = None, property_type: Optional[str] = None
+    df: pd.DataFrame,
+    expected_columns: Optional[List[str]] = None,
+    date_str: Optional[str] = None,
+    property_type: Optional[str] = None,
 ) -> ValidationResult:
     """
     Validate numeric columns for missing values, outliers, etc.
@@ -381,8 +377,10 @@ def validate_time_series_continuity(
 
 
 def generate_validation_report(
-    df: pd.DataFrame, date_col: Optional[str] = None,
-    date_str: Optional[str] = None, property_type: Optional[str] = None
+    df: pd.DataFrame,
+    date_col: Optional[str] = None,
+    date_str: Optional[str] = None,
+    property_type: Optional[str] = None,
 ) -> ValidationResult:
     """
     Generate a comprehensive validation report for a DataFrame.

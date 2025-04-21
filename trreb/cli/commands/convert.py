@@ -7,7 +7,7 @@ import argparse
 import pandas as pd
 from tqdm import tqdm
 
-from trreb.services.csv_converter import get_table_extractor
+from trreb.services.converter import get_table_extractor
 from trreb.utils.logging import logger
 from trreb.utils.paths import (
     extract_date_from_filename,

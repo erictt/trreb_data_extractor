@@ -18,7 +18,7 @@ from trreb.config import (
     XAI_API_BASE_URL,
     XAI_API_KEY,
 )
-from trreb.services.csv_converter.base import TableExtractor
+from .base import TableExtractor
 from trreb.utils.logging import logger
 
 

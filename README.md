@@ -68,13 +68,8 @@ trreb_data_extractor/
 ├── trreb/                    # Main package directory
 │   ├── services/             # Core services
 │   │   ├── fetcher/          # Downloads PDFs and extracts pages
-│   │   │   ├── downloader.py # Handles PDF downloads
-│   │   │   ├── identifier.py # Identifies page types in PDFs
-│   │   │   ├── extractor.py  # Extracts specific pages
-│   │   │   ├── report.py     # Generates summary reports
-│   │   │   └── facade.py     # High-level operations
-│   │   ├── csv_converter/    # Converts extracted PDF pages to CSV format
-│   │   ├── data_processor/   # Data cleaning, normalization, and validation
+│   │   ├── converter/        # Converts extracted PDF pages to CSV format
+│   │   ├── normalizer/       # Data cleaning, normalization, and validation
 │   │   └── economic/         # Economic data integration
 │   ├── cli/                  # Command-line interface
 │   │   ├── commands/         # Individual command modules

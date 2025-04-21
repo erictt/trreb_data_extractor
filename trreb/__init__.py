@@ -6,8 +6,8 @@ Toronto Real Estate Board (TRREB) market reports.
 """
 
 # Re-export services directly from the package root for backwards compatibility
-from trreb.services.csv_converter import get_table_extractor, process_pdf
-from trreb.services.data_processor import normalize_dataset, generate_validation_report
+from trreb.services.converter import get_table_extractor, process_pdf
+from trreb.services.normalizer import normalize_dataset, generate_validation_report
 from trreb.services.fetcher import (
     download_reports,
     extract_page_from_pdf,
