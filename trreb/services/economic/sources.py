@@ -296,33 +296,33 @@ class StatisticsCanadaEconomic(EconomicDataSource):
             # For demonstration purposes, we'll simulate downloading these indicators
             # In a real implementation, you would use the Statistics Canada API
             
-            # Simulate data for unemployment rate
-            dates = pd.date_range(start="2016-01-01", end="2025-04-30", freq="MS")
+            # Simulate data for unemployment rate - start from 2015-01-01 to include one more year for lag calculations
+            dates = pd.date_range(start="2015-01-01", end="2025-04-30", freq="MS")
             unemployment_df = pd.DataFrame({
                 "date": dates,
-                "unemployment_rate_ontario": [6.5 + 0.1 * i for i in range(len(dates))],
-                "unemployment_rate_toronto": [6.0 + 0.1 * i for i in range(len(dates))],
+                "unemployment_rate_ontario": [6.4 + 0.1 * i for i in range(len(dates))],
+                "unemployment_rate_toronto": [5.9 + 0.1 * i for i in range(len(dates))],
             })
             
-            # Simulate data for CPI
+            # Simulate data for CPI - start from 2015-01-01
             cpi_df = pd.DataFrame({
                 "date": dates,
-                "cpi_all_items": [100 + 0.2 * i for i in range(len(dates))],
-                "cpi_housing": [100 + 0.3 * i for i in range(len(dates))],
+                "cpi_all_items": [99.8 + 0.2 * i for i in range(len(dates))],
+                "cpi_housing": [99.7 + 0.3 * i for i in range(len(dates))],
             })
             
-            # Simulate data for new housing price index
+            # Simulate data for new housing price index - start from 2015-01-01
             housing_price_df = pd.DataFrame({
                 "date": dates,
-                "new_housing_price_index": [100 + 0.4 * i for i in range(len(dates))],
+                "new_housing_price_index": [99.6 + 0.4 * i for i in range(len(dates))],
             })
             
-            # Simulate data for population estimates
-            quarterly_dates = pd.date_range(start="2016-01-01", end="2025-04-30", freq="QS")
+            # Simulate data for population estimates - start from 2015-01-01
+            quarterly_dates = pd.date_range(start="2015-01-01", end="2025-04-30", freq="QS")
             population_df = pd.DataFrame({
                 "date": quarterly_dates,
-                "population_ontario": [14000000 + 10000 * i for i in range(len(quarterly_dates))],
-                "population_toronto": [6000000 + 5000 * i for i in range(len(quarterly_dates))],
+                "population_ontario": [13990000 + 10000 * i for i in range(len(quarterly_dates))],
+                "population_toronto": [5995000 + 5000 * i for i in range(len(quarterly_dates))],
             })
             
             # Merge all indicators into a single DataFrame
@@ -430,13 +430,13 @@ class CMHCHousingData(EconomicDataSource):
             # In a real implementation, you would use the CMHC API
             # For demonstration purposes, we'll simulate downloading the data
             
-            # Simulate data for housing starts and completions
-            dates = pd.date_range(start="2016-01-01", end="2025-04-30", freq="MS")
+            # Simulate data for housing starts and completions - start from 2015-01-01
+            dates = pd.date_range(start="2015-01-01", end="2025-04-30", freq="MS")
             housing_df = pd.DataFrame({
                 "date": dates,
-                "housing_starts_gta": [2000 + 10 * i for i in range(len(dates))],
-                "housing_completions_gta": [1800 + 8 * i for i in range(len(dates))],
-                "under_construction_gta": [15000 + 20 * i for i in range(len(dates))],
+                "housing_starts_gta": [1990 + 10 * i for i in range(len(dates))],
+                "housing_completions_gta": [1792 + 8 * i for i in range(len(dates))],
+                "under_construction_gta": [14980 + 20 * i for i in range(len(dates))],
             })
             
             return housing_df
