@@ -7,7 +7,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from trreb.cli.commands import fetch, process, economy
+from trreb.cli.commands import fetch, economy, convert, normalize
 from trreb.utils.logging import setup_logger, logger
 
 # Add the parent directory to the Python path to support direct execution
@@ -69,35 +69,53 @@ def main():
 
     parser_fetch.set_defaults(func=fetch)
 
-    # --- Process Command ---
-    parser_process = subparsers.add_parser(
-        "process", help="Process extracted pages into CSV format."
+    # --- Convert Command ---
+    parser_convert = subparsers.add_parser(
+        "convert", help="Convert extracted PDF pages into CSV format."
     )
-    parser_process.add_argument(
+    parser_convert.add_argument(
         "--type",
         choices=["all_home_types", "detached"],
         required=True,
-        help="Type of property data to process",
+        help="Type of property data to convert",
     )
-    parser_process.add_argument(
-        "--date", help="Process a specific date (e.g., 2020-01)"
+    parser_convert.add_argument(
+        "--date", help="Convert a specific date (e.g., 2020-01)"
     )
-    parser_process.add_argument(
+    parser_convert.add_argument(
         "--overwrite", action="store_true", help="Overwrite existing CSV files"
     )
-    parser_process.add_argument(
-        "--validate", action="store_true", help="Validate data after processing"
-    )
-    parser_process.add_argument(
-        "--normalize", action="store_true", help="Normalize data after processing"
-    )
-    parser_process.add_argument(
+    parser_convert.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
         help="Set the logging level",
     )
-    parser_process.set_defaults(func=process)  # Link to function in commands module
+    parser_convert.set_defaults(func=convert)
+    
+    # --- Normalize Command ---
+    parser_normalize = subparsers.add_parser(
+        "normalize", help="Normalize and optionally validate converted CSV data."
+    )
+    parser_normalize.add_argument(
+        "--type",
+        choices=["all_home_types", "detached"],
+        required=True,
+        help="Type of property data to normalize",
+    )
+    parser_normalize.add_argument(
+        "--date", help="Normalize a specific date (e.g., 2020-01)"
+    )
+    parser_normalize.add_argument(
+        "--validate", action="store_true", help="Validate data before normalization"
+    )
+    parser_normalize.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser_normalize.set_defaults(func=normalize)
 
     # --- Economy Command ---
     parser_economy = subparsers.add_parser(

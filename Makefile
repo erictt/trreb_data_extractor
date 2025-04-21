@@ -1,4 +1,4 @@
-.PHONY: setup clean fetch extract fetch-extract process economy lint format
+.PHONY: setup clean fetch extract fetch-extract convert normalize economy lint format
 
 # Default Python interpreter
 PYTHON := python3
@@ -50,11 +50,17 @@ fetch-extract:  ## Download and extract TRREB PDFs in one operation
 	@echo "Downloading and extracting TRREB PDFs..."
 	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch both --log-level DEBUG
 
-process:  ## Process extracted pages into CSV format
-	@echo "Processing all home types data..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli process --type all_home_types --validate --normalize
-	@echo "Processing detached homes data..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli process --type detached --validate --normalize
+convert:  ## Convert extracted pages to CSV format
+	@echo "Converting all home types data to CSV..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli convert --type all_home_types
+	@echo "Converting detached homes data to CSV..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli convert --type detached
+
+normalize:  ## Normalize and validate the converted CSV data
+	@echo "Normalizing all home types data..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli normalize --type all_home_types --validate
+	@echo "Normalizing detached homes data..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli normalize --type detached --validate
 
 economy:  ## Download and process economic indicators data
 	@echo "Processing economic indicators data..."
@@ -80,5 +86,6 @@ $(PDF_DIR) $(EXTRACTED_DIR) $(PROCESSED_DIR) $(ECONOMIC_DIR):
 fetch: $(PDF_DIR)
 extract: $(EXTRACTED_DIR)
 fetch-extract: $(PDF_DIR) $(EXTRACTED_DIR)
-process: $(PROCESSED_DIR)
+convert: $(PROCESSED_DIR)
+normalize: $(PROCESSED_DIR)
 economy: $(ECONOMIC_DIR)
