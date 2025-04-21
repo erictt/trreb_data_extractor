@@ -4,9 +4,18 @@ Data validation utilities for TRREB data.
 
 import pandas as pd
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 
-from trreb.config import ALL_REGIONS
+from trreb.config import (
+    ALL_REGIONS,
+    PRE_2020_ALL_HOME_COLUMNS,
+    PRE_2020_DETACHED_COLUMNS,
+    MID_PERIOD_ALL_HOME_COLUMNS,
+    MID_PERIOD_DETACHED_COLUMNS,
+    POST_2022_ALL_HOME_COLUMNS,
+    POST_2022_DETACHED_COLUMNS
+)
+from trreb.services.data_processor.normalization import determine_period, get_expected_columns
 
 
 class ValidationResult:
@@ -115,7 +124,8 @@ def validate_regions(df: pd.DataFrame, region_col: str = None) -> ValidationResu
 
 
 def validate_numeric_columns(
-    df: pd.DataFrame, expected_columns: Optional[List[str]] = None
+    df: pd.DataFrame, expected_columns: Optional[List[str]] = None,
+    date_str: Optional[str] = None, property_type: Optional[str] = None
 ) -> ValidationResult:
     """
     Validate numeric columns for missing values, outliers, etc.
@@ -123,6 +133,8 @@ def validate_numeric_columns(
     Args:
         df: DataFrame to validate
         expected_columns: List of columns that should be numeric (if None, use a default list)
+        date_str: Date string in 'YYYY-MM' format for determining period
+        property_type: Type of property data ('all_home_types' or 'detached')
 
     Returns:
         ValidationResult containing any issues
@@ -131,18 +143,24 @@ def validate_numeric_columns(
 
     # Default numeric columns if not specified
     if expected_columns is None:
-        expected_columns = [
-            "Sales",
-            "Dollar Volume",
-            "Average Price",
-            "Median Price",
-            "New Listings",
-            "Active Listings",
-            "Months Inventory",
-            "Avg SP/LP",
-            "Avg DOM",
-            "Avg PDOM",
-        ]
+        if date_str and property_type:
+            # Determine the period and get expected columns
+            period = determine_period(date_str)
+            expected_columns = get_expected_columns(property_type, period)
+        else:
+            # Use a comprehensive list if period can't be determined
+            expected_columns = [
+                "Sales",
+                "Dollar Volume",
+                "Average Price",
+                "Median Price",
+                "New Listings",
+                "Active Listings",
+                "Months Inventory",
+                "Avg SP/LP",
+                "Avg DOM",
+                "Avg PDOM",
+            ]
 
     # Filter to only columns that exist in the DataFrame
     numeric_cols = [col for col in expected_columns if col in df.columns]
@@ -349,7 +367,8 @@ def validate_time_series_continuity(
 
 
 def generate_validation_report(
-    df: pd.DataFrame, date_col: Optional[str] = None
+    df: pd.DataFrame, date_col: Optional[str] = None,
+    date_str: Optional[str] = None, property_type: Optional[str] = None
 ) -> ValidationResult:
     """
     Generate a comprehensive validation report for a DataFrame.
@@ -357,6 +376,8 @@ def generate_validation_report(
     Args:
         df: DataFrame to validate
         date_col: Name of the date column (if available)
+        date_str: Date string in 'YYYY-MM' format for determining period
+        property_type: Type of property data ('all_home_types' or 'detached')
 
     Returns:
         ValidationResult containing any issues
@@ -366,7 +387,7 @@ def generate_validation_report(
 
     # Run each validation check
     region_validation = validate_regions(df)
-    numeric_validation = validate_numeric_columns(df)
+    numeric_validation = validate_numeric_columns(df, None, date_str, property_type)
     consistency_validation = validate_data_consistency(df)
 
     # Combine issues from all validations
@@ -379,5 +400,15 @@ def generate_validation_report(
         time_series_validation = validate_time_series_continuity(df, date_col)
         for issue in time_series_validation.issues:
             result.add_issue(issue)
+
+    # Additional validation: Check for expected columns based on period
+    if date_str and property_type:
+        period = determine_period(date_str)
+        expected_columns = get_expected_columns(property_type, period)
+        missing_cols = [col for col in expected_columns if col not in df.columns]
+        if missing_cols:
+            result.add_issue(
+                f"Missing expected columns for {period} {property_type}: {', '.join(missing_cols)}"
+            )
 
     return result

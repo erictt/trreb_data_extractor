@@ -50,6 +50,7 @@ MAX_DOWNLOAD_WORKERS = 5
 
 # Extraction configuration
 EXTRACTION_CUTOFF_DATE = "2020-01"  # Date to switch extraction methods
+SECOND_FORMAT_CUTOFF_DATE = "2022-04"  # Date to switch to the third format style
 
 # Region name standardization mapping
 REGION_NAME_MAPPING: Dict[str, str] = {
@@ -59,11 +60,15 @@ REGION_NAME_MAPPING: Dict[str, str] = {
     "E. Gwillimbury": "East Gwillimbury",
     "East Gwillimbury": "East Gwillimbury",
     "EGswsiallimbury": "East Gwillimbury",
+    "GEswsiallimbury": "East Gwillimbury",
     "Whitchurch-Stouffville": "Whitchurch-Stouffville",
     "Stouffville": "Whitchurch-Stouffville",
     "Bradford West Gwillimbury": "Bradford West Gwillimbury",
     "Bradford West": "Bradford West Gwillimbury",
     "Bradford": "Bradford West Gwillimbury",
+    "Adjala-Tosorontio": "Adjala-Tosorontio",
+    "King Township": "King",
+    "King": "King",
 }
 
 # Column name standardization mapping
@@ -71,6 +76,7 @@ COLUMN_NAME_MAPPING: Dict[str, str] = {
     "Number of Sales": "Sales",
     "# of Sales": "Sales",
     "Sales": "Sales",
+    "Sales1": "Sales",
     "Dollar Volume1": "Dollar Volume",
     "Dollar Volume": "Dollar Volume",
     "Average Price1": "Average Price",
@@ -80,14 +86,19 @@ COLUMN_NAME_MAPPING: Dict[str, str] = {
     "New Listings2": "New Listings",
     "New Listings": "New Listings",
     "SNLR (Trend) 8": "SNLR Trend",
+    "SNLR (Trend)8": "SNLR Trend",
     "SNLR (Trend)": "SNLR Trend",
     "SNLR Trend": "SNLR Trend",
     "Active Listings 3": "Active Listings",
+    "Active Listings3": "Active Listings",
     "Active Listings": "Active Listings",
     "Mos. Inv. (Trend)9": "Months Inventory",
+    "Mos. Inv. (Trend) 9": "Months Inventory",
+    "Mos. Inv (Trend)": "Months Inventory",
     "Mos Inv (Trend)": "Months Inventory",
     "Mos. Inv. (Trend)": "Months Inventory",
     "Avg. SP / LP4": "Avg SP/LP",
+    "Avg. SP/LP4": "Avg SP/LP",
     "Avg. SP/LP": "Avg SP/LP",
     "Avg SP/LP": "Avg SP/LP",
     "Avg. DOM5": "Avg DOM",
@@ -96,6 +107,43 @@ COLUMN_NAME_MAPPING: Dict[str, str] = {
     "Avg. PDOM": "Avg PDOM",
     "Avg PDOM": "Avg PDOM",
 }
+
+# Expected column configurations for different property types and periods
+# Pre-2020 (2016 to 2019-12)
+PRE_2020_ALL_HOME_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "SNLR Trend", "Active Listings", "Months Inventory", 
+    "Avg SP/LP", "Avg DOM"
+]
+
+PRE_2020_DETACHED_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "Active Listings", "Avg SP/LP", "Avg DOM"
+]
+
+# 2020-01 to 2022-04
+MID_PERIOD_ALL_HOME_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "SNLR Trend", "Active Listings", "Months Inventory", 
+    "Avg SP/LP", "Avg DOM", "Avg PDOM"
+]
+
+MID_PERIOD_DETACHED_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "Active Listings", "Avg SP/LP", "Avg DOM"
+]
+
+# Post 2022-04
+POST_2022_ALL_HOME_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "SNLR Trend", "Active Listings", "Months Inventory", 
+    "Avg SP/LP", "Avg DOM", "Avg PDOM"
+]
+
+POST_2022_DETACHED_COLUMNS = [
+    "Sales", "Dollar Volume", "Average Price", "Median Price", 
+    "New Listings", "Active Listings", "Avg SP/LP", "Avg DOM"
+]
 
 # List of all possible regions (for validation)
 ALL_REGIONS: List[str] = [

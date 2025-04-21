@@ -58,10 +58,10 @@ def normalize_type(
     """
     # Find all CSV files matching the property type
     csv_files = []
-    processed_dir = PROCESSED_DIR
+    processed_dir = PROCESSED_DIR / property_type
     
     # Get all CSV files for this property type
-    for csv_path in processed_dir.glob(f"*_{property_type}.csv"):
+    for csv_path in processed_dir.glob("*.csv"):
         # Skip already normalized files
         if "normalized" in csv_path.name:
             continue
@@ -77,21 +77,42 @@ def normalize_type(
         logger.error(f"No CSV files found for property type '{property_type}'.")
         return None
 
-    # Combine all processed CSVs
+    # Process each CSV file
     all_data = []
     for csv_path in tqdm(csv_files, desc=f"Reading {property_type} files"):
         try:
             df = pd.read_csv(csv_path)
             # Extract date from filename if it's not already in the data
             if "date" not in df.columns:
-                # Try to extract date from filename
-                date_str = csv_path.stem.split("_")[0]
-                if date_str and len(date_str) == 6:  # 'YYYYMM' format
+                # Extract date from filename (e.g., "2020-10.csv" -> "2020-10")
+                date_str = csv_path.stem  # get filename without extension
+                if date_str and len(date_str) == 7 and "-" in date_str:  # 'YYYY-MM' format
+                    df["date"] = date_str
+                    df["date_str"] = date_str  # Add date_str column for period determination
+                elif date_str and len(date_str) == 6:  # 'YYYYMM' format
                     date_str = f"{date_str[:4]}-{date_str[4:]}"
                     df["date"] = date_str
+                    df["date_str"] = date_str  # Add date_str column for period determination
                 else:
                     logger.warning(f"Could not extract date from {csv_path.name}. Using filename as date.")
                     df["date"] = csv_path.stem
+                
+            # Individual file normalization (to handle errors better)
+            try:
+                # Extract date string from filename for period determination
+                file_date_str = csv_path.stem
+                if len(file_date_str) > 7:  # Truncate if there's extra info in filename
+                    file_date_str = file_date_str[:7]
+                    
+                # Normalize the individual file
+                df = normalize_dataset(
+                    df=df,
+                    date_str=file_date_str if date else None,
+                    property_type=property_type
+                )
+            except Exception as e:
+                logger.warning(f"Error normalizing individual file {csv_path}: {e}")
+                
             all_data.append(df)
         except Exception as e:
             logger.error(f"Error reading {csv_path}: {e}")
@@ -104,13 +125,23 @@ def normalize_type(
 
     # Validate if requested
     if validate:
-        validation_result = generate_validation_report(combined_df, date_col="date")
+        validation_result = generate_validation_report(
+            df=combined_df, 
+            date_col="date",
+            property_type=property_type,
+            date_str=date if date else None
+        )
         logger.info("\nValidation Report:")
         logger.info(validation_result)
 
     # Normalize the data
     logger.info("\nNormalizing data...")
-    normalized_df = normalize_dataset(combined_df, date_col="date")
+    normalized_df = normalize_dataset(
+        df=combined_df, 
+        date_col="date",
+        property_type=property_type,
+        date_str=date if date else None
+    )
 
     # Save normalized data
     normalized_path = PROCESSED_DIR / f"normalized_{property_type}.csv"

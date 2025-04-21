@@ -2,10 +2,24 @@
 Data normalization utilities for TRREB data.
 """
 
-import pandas as pd
-from typing import Optional
+from typing import Optional, Dict, List, Union
+from datetime import datetime
 
-from trreb.config import COLUMN_NAME_MAPPING, REGION_HIERARCHY, REGION_NAME_MAPPING
+import pandas as pd
+
+from trreb.config import (
+    COLUMN_NAME_MAPPING, 
+    REGION_HIERARCHY, 
+    REGION_NAME_MAPPING,
+    PRE_2020_ALL_HOME_COLUMNS,
+    PRE_2020_DETACHED_COLUMNS,
+    MID_PERIOD_ALL_HOME_COLUMNS,
+    MID_PERIOD_DETACHED_COLUMNS,
+    POST_2022_ALL_HOME_COLUMNS,
+    POST_2022_DETACHED_COLUMNS,
+    EXTRACTION_CUTOFF_DATE,
+    SECOND_FORMAT_CUTOFF_DATE
+)
 from trreb.utils.logging import logger
 
 
@@ -89,13 +103,12 @@ def convert_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in price_cols:
         if col in df_copy.columns:
             try:
-                df_copy[col] = (
-                    df_copy[col].astype(str).str.replace("$", "", regex=False)
-                )
-                df_copy[col] = (
-                    df_copy[col].astype(str).str.replace(",", "", regex=False)
-                )
-                df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
+                if pd.api.types.is_object_dtype(df_copy[col]):
+                    # Clean strings
+                    df_copy[col] = df_copy[col].astype(str).str.replace("$", "", regex=False)
+                    df_copy[col] = df_copy[col].astype(str).str.replace(",", "", regex=False)
+                    # Convert to numeric
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
             except Exception as e:
                 logger.warning(f"Error converting {col} to numeric: {e}")
 
@@ -103,11 +116,11 @@ def convert_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in count_cols:
         if col in df_copy.columns:
             try:
-                if df_copy[col].dtype == object:  # Only process if it's a string/object
-                    df_copy[col] = (
-                        df_copy[col].astype(str).str.replace(",", "", regex=False)
-                    )
-                df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
+                if pd.api.types.is_object_dtype(df_copy[col]):
+                    # Clean strings
+                    df_copy[col] = df_copy[col].astype(str).str.replace(",", "", regex=False)
+                    # Convert to numeric
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
             except Exception as e:
                 logger.warning(f"Error converting {col} to numeric: {e}")
 
@@ -115,12 +128,18 @@ def convert_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in percentage_cols:
         if col in df_copy.columns:
             try:
-                df_copy[col] = (
-                    df_copy[col].astype(str).str.replace("%", "", regex=False)
-                )
-                df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
-                # Convert to decimal (e.g., 95% -> 0.95)
-                df_copy[col] = df_copy[col] / 100
+                if pd.api.types.is_object_dtype(df_copy[col]):
+                    # Clean strings
+                    df_copy[col] = df_copy[col].astype(str).str.replace("%", "", regex=False)
+                    # Convert to numeric
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
+                    # Convert to decimal (e.g., 95% -> 0.95)
+                    df_copy[col] = df_copy[col] / 100
+                elif pd.api.types.is_numeric_dtype(df_copy[col]):
+                    # If already numeric, check if needs to be divided by 100
+                    if df_copy[col].max() > 1.5 and df_copy[col].min() >= 0:
+                        # Likely a percentage value (e.g., 95 instead of 0.95)
+                        df_copy[col] = df_copy[col] / 100
             except Exception as e:
                 logger.warning(f"Error converting {col} to numeric: {e}")
 
@@ -128,7 +147,9 @@ def convert_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
     for col in decimal_cols:
         if col in df_copy.columns:
             try:
-                df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
+                if pd.api.types.is_object_dtype(df_copy[col]):
+                    # Convert directly to numeric
+                    df_copy[col] = pd.to_numeric(df_copy[col], errors="coerce")
             except Exception as e:
                 logger.warning(f"Error converting {col} to numeric: {e}")
 
@@ -211,12 +232,110 @@ def add_date_components(df: pd.DataFrame, date_col: str) -> pd.DataFrame:
     return df_copy
 
 
-def normalize_dataset(df: pd.DataFrame, date_col: Optional[str] = None) -> pd.DataFrame:
+def determine_period(date_str: str) -> str:
+    """
+    Determine which period a date belongs to based on the format cutoff dates.
+    
+    Args:
+        date_str: Date string in 'YYYY-MM' format
+        
+    Returns:
+        'pre-2020', 'mid-period', or 'post-2022'
+    """
+    if date_str < EXTRACTION_CUTOFF_DATE:
+        return 'pre-2020'
+    elif date_str < SECOND_FORMAT_CUTOFF_DATE:
+        return 'mid-period'
+    else:
+        return 'post-2022'
+
+def get_expected_columns(property_type: str, period: str) -> List[str]:
+    """
+    Get the expected columns for a given property type and period.
+    
+    Args:
+        property_type: 'all_home_types' or 'detached'
+        period: 'pre-2020', 'mid-period', or 'post-2022'
+        
+    Returns:
+        List of expected column names
+    """
+    if property_type == 'all_home_types':
+        if period == 'pre-2020':
+            return PRE_2020_ALL_HOME_COLUMNS
+        elif period == 'mid-period':
+            return MID_PERIOD_ALL_HOME_COLUMNS
+        else:  # post-2022
+            return POST_2022_ALL_HOME_COLUMNS
+    else:  # detached
+        if period == 'pre-2020':
+            return PRE_2020_DETACHED_COLUMNS
+        elif period == 'mid-period':
+            return MID_PERIOD_DETACHED_COLUMNS
+        else:  # post-2022
+            return POST_2022_DETACHED_COLUMNS
+
+def ensure_column_consistency(df: pd.DataFrame, expected_columns: List[str]) -> pd.DataFrame:
+    """
+    Ensure the DataFrame has all expected columns in the right order.
+    Missing columns are added with NaN values.
+    
+    Args:
+        df: DataFrame to process
+        expected_columns: List of expected column names
+        
+    Returns:
+        DataFrame with consistent columns
+    """
+    if df.empty:
+        return df
+        
+    # Create a copy to avoid modifying the original
+    df_copy = df.copy()
+    
+    # Get the region column (first column)
+    if len(df_copy.columns) > 0:
+        region_col = df_copy.columns[0]
+    else:
+        logger.warning("DataFrame has no columns for column consistency check")
+        return df_copy
+    
+    # Check for missing expected columns and add them
+    for col in expected_columns:
+        if col not in df_copy.columns:
+            logger.warning(f"Adding missing column: {col}")
+            df_copy[col] = None
+    
+    # Create a new DataFrame with region column and expected columns in order
+    # Start with the region column
+    result_columns = [region_col]
+    
+    # Add all expected columns
+    for col in expected_columns:
+        if col in df_copy.columns and col != region_col:
+            result_columns.append(col)
+    
+    # Add any additional columns that aren't in expected_columns
+    for col in df_copy.columns:
+        if col not in result_columns and col != region_col:
+            result_columns.append(col)
+    
+    # Return the DataFrame with reordered columns
+    return df_copy[result_columns]
+
+def normalize_dataset(
+    df: pd.DataFrame, 
+    date_str: Optional[str] = None, 
+    property_type: str = 'all_home_types', 
+    date_col: Optional[str] = None
+) -> pd.DataFrame:
     """
     Apply all normalization steps to a dataset.
 
     Args:
         df: DataFrame to process
+        date_str: Date string in 'YYYY-MM' format for determining period
+        property_type: Type of property data ('all_home_types' or 'detached')
         date_col: Name of the date column (if available)
 
     Returns:
@@ -224,6 +343,14 @@ def normalize_dataset(df: pd.DataFrame, date_col: Optional[str] = None) -> pd.Da
     """
     if df.empty:
         return df
+        
+    # Determine period if date_str is provided
+    period = None
+    if date_str:
+        period = determine_period(date_str)
+        logger.info(f"Normalizing dataset for {date_str} - identified as {period} period")
+    else:
+        logger.info(f"Normalizing dataset without specific date - applying general normalization")
 
     # Apply each normalization step
     df = standardize_region_names(df)
@@ -234,5 +361,10 @@ def normalize_dataset(df: pd.DataFrame, date_col: Optional[str] = None) -> pd.Da
     # Add date components if date_col is provided
     if date_col is not None and date_col in df.columns:
         df = add_date_components(df, date_col)
+        
+    # Check and reorder columns based on expected format if period is known
+    if period and property_type:
+        expected_columns = get_expected_columns(property_type, period)
+        df = ensure_column_consistency(df, expected_columns)
 
     return df
