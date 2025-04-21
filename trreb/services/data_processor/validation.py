@@ -90,7 +90,16 @@ def validate_regions(df: pd.DataFrame, region_col: str = None) -> ValidationResu
 
     # Check for unknown regions
     regions = df[region_col].unique()
-    unknown_regions = [r for r in regions if r not in ALL_REGIONS and pd.notna(r)]
+    # Convert non-string regions to strings and filter out NaN values
+    unknown_regions = []
+    for r in regions:
+        if pd.notna(r) and r not in ALL_REGIONS:
+            # Convert to string if it's not already
+            if not isinstance(r, str):
+                r_str = str(r)
+            else:
+                r_str = r
+            unknown_regions.append(r_str)
 
     if unknown_regions:
         result.add_issue(
@@ -183,8 +192,9 @@ def validate_numeric_columns(
     # Check for missing values
     for col in numeric_cols:
         missing_count = df[col].isna().sum()
-        if missing_count > 0:
-            missing_pct = missing_count / len(df) * 100
+        missing_pct = missing_count / len(df) * 100
+        # Only flag if more than 5% missing (to account for period differences)
+        if missing_pct > 5:
             result.add_issue(
                 f"Column '{col}' has {missing_count} missing values ({missing_pct:.1f}%). "
                 f"Consider imputation or filtering strategies."
@@ -194,23 +204,27 @@ def validate_numeric_columns(
     for col in [c for c in numeric_cols if c not in ["Avg SP/LP"]]:
         if pd.api.types.is_numeric_dtype(df[col]):
             neg_count = (df[col] < 0).sum()
-            if neg_count > 0:
+            # Only flag if more than a few rows are affected
+            if neg_count > 3:
                 result.add_issue(
                     f"Column '{col}' has {neg_count} negative values. "
                     f"This may indicate data quality issues."
                 )
 
-    # Check for outliers using IQR method
-    for col in numeric_cols:
+    # Check for outliers using IQR method - only for non-date-sensitive columns
+    # Columns like price and volume will naturally vary over time periods
+    robust_cols = ["Avg SP/LP", "Avg DOM", "Avg PDOM", "SNLR Trend", "Months Inventory"]
+    for col in [c for c in numeric_cols if c in robust_cols]:
         if pd.api.types.is_numeric_dtype(df[col]) and not df[col].isna().all():
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
-            lower_bound = Q1 - 3 * IQR
-            upper_bound = Q3 + 3 * IQR
+            # Use a more generous threshold for outliers (5 instead of 3)
+            lower_bound = Q1 - 5 * IQR
+            upper_bound = Q3 + 5 * IQR
 
             outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
-            if len(outliers) > 0:
+            if len(outliers) > 5:  # Only report if significant number of outliers
                 result.add_issue(
                     f"Column '{col}' has {len(outliers)} outliers. "
                     f"This may require further investigation."

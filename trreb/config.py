@@ -54,58 +54,149 @@ SECOND_FORMAT_CUTOFF_DATE = "2022-04"  # Date to switch to the third format styl
 
 # Region name standardization mapping
 REGION_NAME_MAPPING: Dict[str, str] = {
+    # Board-wide totals
     "TREB Total": "TRREB Total",
     "TRREB Total": "TRREB Total",
     "All TRREB Areas": "TRREB Total",
+    "Total TREB": "TRREB Total",
+    "Total TRREB": "TRREB Total",
+    
+    # East Gwillimbury variations
     "E. Gwillimbury": "East Gwillimbury",
     "East Gwillimbury": "East Gwillimbury",
     "EGswsiallimbury": "East Gwillimbury",
     "GEswsiallimbury": "East Gwillimbury",
+    "E Gwillimbury": "East Gwillimbury",
+    
+    # Stouffville variations
     "Whitchurch-Stouffville": "Whitchurch-Stouffville",
     "Stouffville": "Whitchurch-Stouffville",
+    "W. Stouffville": "Whitchurch-Stouffville",
+    "W Stouffville": "Whitchurch-Stouffville",
+    "Whitchurch Stouffville": "Whitchurch-Stouffville",
+    
+    # Bradford variations
     "Bradford West Gwillimbury": "Bradford West Gwillimbury",
     "Bradford West": "Bradford West Gwillimbury",
     "Bradford": "Bradford West Gwillimbury",
+    "Bradford W. Gwillimbury": "Bradford West Gwillimbury",
+    "Bradford W Gwillimbury": "Bradford West Gwillimbury",
+    
+    # Other variations
     "Adjala-Tosorontio": "Adjala-Tosorontio",
+    "Adjala Tosorontio": "Adjala-Tosorontio",
+    
+    # King variations
     "King Township": "King",
     "King": "King",
+    "King Twp": "King",
+    "King Twp.": "King",
+    
+    # Region variations
+    "Halton": "Halton Region",
+    "Halton Region": "Halton Region",
+    
+    # Toronto variations
+    "Toronto, City of": "City of Toronto",
+    "Toronto City": "City of Toronto",
+    "City of Toronto": "City of Toronto",
+    
+    # Toronto section variations
+    "Toronto W.": "Toronto West",
+    "Toronto West": "Toronto West",
+    "Toronto C.": "Toronto Central",
+    "Toronto Central": "Toronto Central",
+    "Toronto E.": "Toronto East",
+    "Toronto East": "Toronto East",
 }
 
 # Column name standardization mapping
 COLUMN_NAME_MAPPING: Dict[str, str] = {
+    # Sales variations
     "Number of Sales": "Sales",
     "# of Sales": "Sales",
     "Sales": "Sales",
     "Sales1": "Sales",
+    "Sales 1": "Sales",
+    "No. of Sales": "Sales",
+    "Total Sales": "Sales",
+    
+    # Dollar Volume variations
     "Dollar Volume1": "Dollar Volume",
+    "Dollar Volume 1": "Dollar Volume",
     "Dollar Volume": "Dollar Volume",
+    "$ Volume": "Dollar Volume",
+    "Volume ($)": "Dollar Volume",
+    
+    # Average Price variations
     "Average Price1": "Average Price",
+    "Average Price 1": "Average Price",
     "Average Price": "Average Price",
+    "Avg. Price": "Average Price",
+    "Avg Price": "Average Price",
+    
+    # Median Price variations
     "Median Price1": "Median Price",
+    "Median Price 1": "Median Price",
     "Median Price": "Median Price",
+    "Med. Price": "Median Price",
+    "Med Price": "Median Price",
+    
+    # New Listings variations
     "New Listings2": "New Listings",
+    "New Listings 2": "New Listings",
     "New Listings": "New Listings",
+    "New List.": "New Listings",
+    
+    # SNLR Trend variations
     "SNLR (Trend) 8": "SNLR Trend",
     "SNLR (Trend)8": "SNLR Trend",
+    "SNLR (Trend) 9": "SNLR Trend",
+    "SNLR (Trend)9": "SNLR Trend",
     "SNLR (Trend)": "SNLR Trend",
     "SNLR Trend": "SNLR Trend",
+    "SNLR (%)": "SNLR Trend",
+    "Sales-to-New Listings Ratio": "SNLR Trend",
+    
+    # Active Listings variations
     "Active Listings 3": "Active Listings",
     "Active Listings3": "Active Listings",
     "Active Listings": "Active Listings",
+    "Act. List.": "Active Listings",
+    "Active List.": "Active Listings",
+    
+    # Months Inventory variations
     "Mos. Inv. (Trend)9": "Months Inventory",
     "Mos. Inv. (Trend) 9": "Months Inventory",
     "Mos. Inv (Trend)": "Months Inventory",
     "Mos Inv (Trend)": "Months Inventory",
     "Mos. Inv. (Trend)": "Months Inventory",
+    "Mos Inv (Trend) 9": "Months Inventory",
+    "Mos. Inv.": "Months Inventory",
+    "Months of Inventory": "Months Inventory",
+    
+    # Avg SP/LP variations
     "Avg. SP / LP4": "Avg SP/LP",
     "Avg. SP/LP4": "Avg SP/LP",
     "Avg. SP/LP": "Avg SP/LP",
     "Avg SP/LP": "Avg SP/LP",
+    "Avg. SP/LP 4": "Avg SP/LP",
+    "SP/LP Ratio": "Avg SP/LP",
+    "SP/LP (%)": "Avg SP/LP",
+    
+    # Avg DOM variations
     "Avg. DOM5": "Avg DOM",
+    "Avg. DOM 5": "Avg DOM",
     "Avg. LDOM": "Avg DOM",
+    "Avg LDOM": "Avg DOM",
+    "Avg. Days on Market": "Avg DOM",
     "Avg DOM": "Avg DOM",
+    
+    # Avg PDOM variations
     "Avg. PDOM": "Avg PDOM",
     "Avg PDOM": "Avg PDOM",
+    "Avg. Property DOM": "Avg PDOM",
+    "Property DOM": "Avg PDOM",
 }
 
 # Expected column configurations for different property types and periods
