@@ -1,18 +1,23 @@
 """
-Command-line interface package for TRREB data extractor.
+CLI command group for TRREB data extractor.
 """
 
-# Import commands for easier access at the package level
-from trreb.cli.commands import (
-    fetch,
-    convert,
-    normalize,
-    economy,
-)
+import click
 
-__all__ = [
-    "fetch",
-    "convert",
-    "normalize",
-    "economy",
-]
+from trreb.cli.commands.convert import convert
+from trreb.cli.commands.economy import economy  
+from trreb.cli.commands.fetch import fetch
+from trreb.cli.commands.forecast import forecast
+from trreb.cli.commands.normalize import normalize
+
+@click.group()
+def cli():
+    """TRREB data extractor command line interface."""
+    pass
+
+# Register commands
+cli.add_command(convert)
+cli.add_command(economy)
+cli.add_command(fetch)
+cli.add_command(forecast)
+cli.add_command(normalize)

@@ -9,13 +9,14 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 ## Features
 
 - **Automated Data Collection**: Downloads market reports from the TRREB website (2016-present)
-- **Four-Stage Processing Pipeline**:
+- **Five-Stage Processing Pipeline**:
   1. **PDF Page Extraction**: Extracts specific pages from PDF reports
   2. **Table Conversion**: Converts PDF tables to CSV using methods based on report format:
      - Pre-2020 reports: Uses tabula-py for tabular data extraction
      - Post-2020 reports: Uses AI (Grok API) for more accurate extraction of complex tables
   3. **Data Normalization**: Cleans, normalizes, and validates the extracted data
   4. **Economic Data Integration**: Integrates with economic indicators
+  5. **Time Series Forecasting**: Generates market predictions using multiple models
 - **Comprehensive Data Processing**:
   - Extracts both "All Home Types" and "Detached" property data
   - Preserves regional hierarchy information
@@ -25,6 +26,11 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
   - Integrates key economic indicators (interest rates, employment, inflation, etc.)
   - Adds lagged indicators for time series analysis
   - Creates integrated datasets ready for modeling
+- **Time Series Forecasting**:
+  - Multiple forecasting models (SARIMAX, LightGBM)
+  - Automated model selection and optimization
+  - Performance evaluation and visualization
+  - Support for different forecast horizons
 - **Command-Line Interface**:
   - Unified command structure with clear separation of concerns
   - Configurable options for each stage of the pipeline
@@ -66,45 +72,48 @@ The TRREB Data Extractor is a Python package that streamlines the collection and
 ```
 trreb_data_extractor/
 ├── trreb/                    # Main package directory
-│   ├── services/             # Core services
-│   │   ├── fetcher/          # Downloads PDFs and extracts pages
-│   │   ├── converter/        # Converts extracted PDF pages to CSV format
-│   │   ├── normalizer/       # Data cleaning, normalization, and validation
-│   │   └── economic/         # Economic data integration
-│   ├── cli/                  # Command-line interface
-│   │   ├── commands/         # Individual command modules
-│   │   │   ├── fetch.py      # Fetch command implementation (download/extract)
-│   │   │   ├── convert.py    # Convert command implementation (PDF to CSV)
-│   │   │   ├── normalize.py  # Normalize command implementation (data normalization)
-│   │   │   └── economy.py    # Economy command implementation
-│   │   └── __main__.py       # CLI entry point
-│   └── utils/                # Utility functions
+│   ├── services/            # Core services
+│   │   ├── fetcher/         # Downloads PDFs and extracts pages
+│   │   ├── converter/       # Converts extracted PDF pages to CSV format
+│   │   ├── normalizer/      # Data cleaning, normalization, and validation
+│   │   ├── economic/        # Economic data integration
+│   │   └── forecasting/     # Time series forecasting models
+│   ├── cli/                 # Command-line interface
+│   │   ├── commands/        # Individual command modules
+│   │   │   ├── fetch.py     # Fetch command implementation (download/extract)
+│   │   │   ├── convert.py   # Convert command implementation (PDF to CSV)
+│   │   │   ├── normalize.py # Normalize command implementation
+│   │   │   ├── economy.py   # Economy command implementation
+│   │   │   └── forecast.py  # Forecast command implementation
+│   │   └── __main__.py      # CLI entry point
+│   └── utils/               # Utility functions
 │
-├── data/                     # Data directory
-│   ├── pdfs/                 # Downloaded PDFs
-│   ├── extracted/            # Extracted pages
-│   ├── processed/            # Processed CSVs
-│   └── economic/             # Economic indicator data
+├── data/                    # Data directory
+│   ├── pdfs/               # Downloaded PDFs
+│   ├── extracted/          # Extracted pages
+│   ├── processed/          # Processed CSVs
+│   ├── economic/          # Economic indicator data
+│   └── forecasts/         # Forecast outputs and models
 │
-├── docs/                     # Documentation
-└── tests/                    # Tests (removed)
+├── docs/                   # Documentation
+└── tests/                 # Tests (removed)
 ```
 
 ## Usage
 
 ### Command-Line Interface
 
-The package provides a unified command-line interface through the `trreb.cli` module. You can run the commands as follows:
+The package provides a unified command-line interface through the `trreb.cli` module:
 
 ```bash
 # Download reports only
-python -m trreb.cli fetch fetch
+python -m trreb.cli fetch --operation fetch
 
 # Extract pages from PDFs
-python -m trreb.cli fetch extract
+python -m trreb.cli fetch --operation extract
 
 # Download and extract in one operation
-python -m trreb.cli fetch both
+python -m trreb.cli fetch --operation both
 
 # Convert extracted PDF pages to CSV
 python -m trreb.cli convert --type all_home_types
@@ -114,6 +123,9 @@ python -m trreb.cli normalize --type all_home_types --validate
 
 # Download/process/integrate economic indicators
 python -m trreb.cli economy
+
+# Generate forecasts
+python -m trreb.cli forecast --input-type all_home_types --target-variable "Median Price"
 ```
 
 ### Command Options
@@ -122,16 +134,16 @@ python -m trreb.cli economy
 
 ```bash
 # Download reports from a specific year
-python -m trreb.cli fetch fetch --start-year 2020
+python -m trreb.cli fetch --operation fetch --start-year 2020
 
 # Extract with overwrite option
-python -m trreb.cli fetch extract --overwrite
+python -m trreb.cli fetch --operation extract --overwrite
 
 # Extract a specific PDF
-python -m trreb.cli fetch extract --pdf data/pdfs/mw2301.pdf
+python -m trreb.cli fetch --operation extract --pdf data/pdfs/mw2301.pdf
 
 # Download and extract with detailed logging
-python -m trreb.cli fetch both --start-year 2020 --log-level DEBUG
+python -m trreb.cli fetch --operation both --start-year 2020 --log-level DEBUG
 ```
 
 #### Convert Command
@@ -173,7 +185,59 @@ python -m trreb.cli economy --force-download --include-lags
 python -m trreb.cli economy --property-type all_home_types
 ```
 
-#### Makefile
+#### Forecast Command
+
+```bash
+# Basic forecast for median prices
+python -m trreb.cli forecast --input-type all_home_types --target-variable "Median Price"
+
+# Advanced forecast with all models and plots
+python -m trreb.cli forecast \
+    --input-type detached \
+    --model-type all \
+    --target-variable "Median Price" \
+    --forecast-horizon 12 \
+    --region "City of Toronto" \
+    --save-model \
+    --plot
+
+# Run forecasts for specific model type
+python -m trreb.cli forecast \
+    --input-type all_home_types \
+    --model-type sarimax \
+    --target-variable "Sales" \
+    --region "TRREB Total"
+```
+
+The forecast command supports these options:
+- `--input-type`: Type of housing data ("all_home_types" or "detached")
+- `--model-type`: Model selection ("sarimax", "lgbm", or "all")
+- `--target-variable`: Variable to forecast (e.g., "Median Price", "Sales")
+- `--forecast-horizon`: Number of months ahead to forecast
+- `--region`: Specific region to forecast
+- `--output-dir`: Custom directory for forecast results
+- `--save-model`: Save trained models for later use
+- `--plot`: Generate forecast visualizations
+
+### Forecast Directory Structure
+
+The forecasting service creates organized output directories:
+```
+data/forecasts/
+└── {input_type}_{target_variable}_{region}_{timestamp}/
+    ├── prepared_data.csv            # Prepared training data
+    ├── predictions_sarimax.csv      # SARIMAX model predictions
+    ├── predictions_lgbm.csv         # LightGBM model predictions
+    ├── plot_sarimax.png            # SARIMAX forecast plot
+    ├── plot_lgbm.png               # LightGBM forecast plot
+    ├── model_sarimax.joblib        # Saved SARIMAX model
+    ├── model_lgbm.joblib           # Saved LightGBM model
+    └── run_summary.json            # Run configuration and metrics
+```
+
+See [forecasting.md](docs/forecasting.md) for detailed documentation of the forecasting functionality.
+
+### Makefile
 
 The Makefile includes several useful targets:
 
@@ -184,6 +248,7 @@ The Makefile includes several useful targets:
 - **`make convert`**: Converts extracted PDF pages to CSV format
 - **`make normalize`**: Normalizes and validates the converted CSV data
 - **`make economy`**: Downloads/processes/integrates economic indicators
+- **`make forecast`**: Runs the forecasting pipeline for all property types
 - **`make clean`**: Cleans up generated files and directories
 - **`make lint`**: Runs linting tools (flake8, black, isort, mypy)
 - **`make format`**: Formats code using black and isort
@@ -193,13 +258,13 @@ The Makefile includes several useful targets:
 To enable debug logging, use the `--log-level` parameter with any command:
 
 ```bash
-python -m trreb.cli fetch fetch --log-level DEBUG
+python -m trreb.cli fetch --operation fetch --log-level DEBUG
 ```
 
 Or when using make:
 
 ```bash
-# The fetch command already includes DEBUG level
+# Some commands already include DEBUG level
 make fetch
 
 # For other commands, use environment variables
@@ -210,139 +275,20 @@ Debug logs are helpful for troubleshooting issues with the data pipeline.
 
 ## Data Processing Pipeline
 
-1. **Download and/or Extract TRREB Data**: Download monthly market reports from the TRREB website and extract relevant pages using the `fetch` command.
-   - `fetch` operation: Only downloads PDF files
-   - `extract` operation: Only extracts pages from existing PDFs
-   - `both` operation: Downloads PDFs and then extracts pages
-   - Checks for existing files to avoid redundant processing
-   - Supports overwrite mode via `--overwrite` flag
+The package implements a comprehensive data processing pipeline:
 
-2. **Convert PDFs to CSV**: Convert PDF tables to structured CSV data using the `convert` command.
-   - Uses tabula-py for pre-2020 reports
-   - Uses AI (Grok API) for post-2020 reports
+1. **Download and Extract TRREB Data**: Download monthly market reports and extract relevant pages
+2. **Convert PDFs to CSV**: Convert tables to structured data format
+3. **Normalize Data**: Clean, standardize, and validate the data
+4. **Integrate Economic Data**: Add relevant economic indicators
+5. **Generate Forecasts**: Create and evaluate market predictions
 
-3. **Normalize Data**: Clean, normalize, and validate the data using the `normalize` command.
-   - Standardize column names, region names, and data formats
-   - Check for data quality issues, inconsistencies, and anomalies
+The pipeline creates a clear separation of concerns and optimizes performance through smart file existence checks.
 
-4. **Integrate Economic Data**: Integrate real estate data with economic indicators using the `economy` command.
-
-The new module structure creates a clear separation of concerns and makes the pipeline more efficient through smart file existence checks that avoid redundant processing.
-
-## Economic Module
-
-The package includes an economic module that downloads and processes economic indicators relevant to housing prices. This module retrieves data from various sources and prepares it for later integration with the TRREB real estate data during the machine learning training phase.
-
-### Economic Data Sources
-
-The economic module currently supports the following data sources:
-
-1. **Bank of Canada Interest Rates**
-   - Overnight Rate - The primary interest rate set by the central bank
-   - Prime Rate - The base rate banks use to set interest rates for loans
-   - 5-Year Fixed Mortgage Rate - The most common mortgage term in Canada
-
-2. **Statistics Canada Economic Indicators**
-   - Unemployment Rate (Ontario and Toronto)
-   - Consumer Price Index (CPI) for all items and housing
-   - New Housing Price Index
-   - Population Estimates (Ontario and Toronto)
-
-3. **CMHC Housing Data**
-   - Housing Starts in GTA - New residential construction projects
-   - Housing Completions in GTA - Finished housing units
-   - Under Construction in GTA - Current building activity
-
-### Using the Economic Module
-
-#### Downloading Economic Data
-
-Economic data can be downloaded and processed independently from the TRREB data. You can run this step using:
-
-```bash
-# Using the CLI (basic usage)
-python -m trreb.cli economy
-
-# Using the CLI with additional options
-python -m trreb.cli economy --force-download --include-lags
-
-# Using make
-make economy
-```
-
-Available CLI options for the `economy` command:
-- `--property-type [all_home_types|detached]`: Specify which property type dataset to integrate with (optional, needed for integration)
-- `--include-lags`: Include lagged economic indicators during integration (default: true)
-- `--force-download`: Force re-download of economic data even if cached data exists
-- `--log-level [DEBUG|INFO|WARNING|ERROR]`: Set logging level (default: INFO)
-
-The economic data is downloaded from the respective sources and cached in CSV files in the `data/economic` directory:
-- `bank_of_canada_rates.csv`: Interest rates data from Bank of Canada
-- `statistics_canada_economic.csv`: Economic indicators from Statistics Canada
-- `cmhc_housing_data.csv`: Housing supply metrics from CMHC
-- `master_economic_data.csv`: Combined dataset of all economic indicators
-
-The cached data is used in subsequent runs unless you specify `--force-download`.
-
-**Note**: The economic module will download and prepare the economic data regardless of whether you have processed any TRREB data. If TRREB data is available, it will also create integrated datasets; if not, it will simply prepare the economic data for later use.
-
-To complete the data pipeline after downloading economic data, you should process the TRREB data using:
-```bash
-# Convert and normalize all home types data
-python -m trreb.cli convert --type all_home_types
-python -m trreb.cli normalize --type all_home_types --validate
-
-# Convert and normalize detached homes data
-python -m trreb.cli convert --type detached
-python -m trreb.cli normalize --type detached --validate
-```
-
-This will create the normalized TRREB data files that can be integrated with the economic data.
-
-#### How the Economic Data is Organized
-
-1. **Raw Data Storage**: Individual CSV files for each data source in the `data/economic` directory.
-
-2. **Master Dataset**: A combined dataset of all economic indicators in `master_economic_data.csv`.
-
-3. **Integrated Real Estate Data**: The TRREB data integrated with economic indicators in:
-   - `integrated_economic_all_home_types.csv`: For all home types
-   - `integrated_economic_detached.csv`: For detached homes
-
-4. **Date Alignment**: All economic data is aligned with the TRREB data using a `date_str` column in the format 'YYYY-MM'.
-
-5. **Lagged Indicators**: The economic module creates lagged versions of economic indicators (1, 3, 6, and 12 months) to capture time-delayed effects of economic changes on housing prices.
-
-#### Adding Additional Economic Indicators
-
-To add a new economic data source:
-
-1. Create a new class that inherits from `EconomicDataSource` in `trreb/economic/sources.py`
-2. Implement the `download()` and `preprocess()` methods
-3. Add your new data source to the `get_all_data_sources()` function
-
-For more details on available economic indicators and their sources, see [economic_indicators.md](docs/economic_indicators.md).
-
-## Data Complexity
-
-The TRREB data presents several challenges:
-
-- Format changes over time (different column names, region names, etc.)
-- Inconsistent PDF layouts requiring different extraction methods
-- Complex regional hierarchies
-- Various numeric formats and units
-
-See [data_complexity.md](docs/data_complexity.md) for a detailed explanation of these challenges and how they are addressed.
-
-## Future Development
-
-Planned enhancements include:
-
-1. **Machine Learning Module**: Implementation of feature engineering, model training, and evaluation for housing price prediction
-2. **Additional Economic Indicators**: Integration of more detailed economic and demographic data
-3. **Geographic Analysis**: Incorporation of location-based features
-4. **Interactive Visualization**: Dashboard for exploring trends and predictions
-5. **Automated Reporting**: Generation of regular market analysis reports
+For more detailed documentation on specific components, see:
+- [data_complexity.md](docs/data_complexity.md) - Data processing challenges and solutions
+- [economic_indicators.md](docs/economic_indicators.md) - Available economic indicators
+- [forecasting.md](docs/forecasting.md) - Time series forecasting documentation
 
 ## License
 

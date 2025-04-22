@@ -1,4 +1,4 @@
-.PHONY: setup clean fetch extract fetch-extract convert normalize economy lint format
+.PHONY: setup clean fetch extract fetch-extract convert normalize economy forecast lint format
 
 # Default Python interpreter
 PYTHON := python3
@@ -13,6 +13,7 @@ PDF_DIR := $(DATA_DIR)/pdfs
 EXTRACTED_DIR := $(DATA_DIR)/extracted
 PROCESSED_DIR := $(DATA_DIR)/processed
 ECONOMIC_DIR := $(DATA_DIR)/economic
+FORECAST_DIR := $(DATA_DIR)/forecasts
 
 setup:  ## Set up Python virtual environment and install dependencies
 	@echo "Setting up TRREB Data Extractor environment..."
@@ -40,15 +41,15 @@ clean:  ## Remove generated files and directories
 
 fetch:  ## Download TRREB PDFs only
 	@echo "Downloading TRREB PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch fetch --log-level DEBUG
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch --operation fetch --log-level DEBUG
 
 extract:  ## Extract relevant pages from PDFs
 	@echo "Extracting pages from PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch extract
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch --operation extract
 
 fetch-extract:  ## Download and extract TRREB PDFs in one operation
 	@echo "Downloading and extracting TRREB PDFs..."
-	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch both --log-level DEBUG
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli fetch --operation both --log-level DEBUG
 
 convert:  ## Convert extracted pages to CSV format
 	@echo "Converting all home types data to CSV..."
@@ -66,6 +67,20 @@ economy:  ## Download and process economic indicators data
 	@echo "Processing economic indicators data..."
 	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli economy
 
+forecast:  ## Run forecasting pipeline for median prices
+	@echo "Running forecasts for all home types..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli forecast \
+		--input-type all_home_types \
+		--model-type all \
+		--target-variable "Median Price" \
+		--plot
+	@echo "Running forecasts for detached homes..."
+	@. $(VENV_ACTIVATE) && $(PYTHON) -m trreb.cli forecast \
+		--input-type detached \
+		--model-type all \
+		--target-variable "Median Price" \
+		--plot
+
 lint:  ## Run linters (flake8, black, isort, mypy)
 	@echo "Running linters..."
 	@. $(VENV_ACTIVATE) && flake8 trreb/
@@ -79,7 +94,7 @@ format:  ## Format code using black and isort
 	@. $(VENV_ACTIVATE) && isort trreb/
 
 # Create data directories
-$(PDF_DIR) $(EXTRACTED_DIR) $(PROCESSED_DIR) $(ECONOMIC_DIR):
+$(PDF_DIR) $(EXTRACTED_DIR) $(PROCESSED_DIR) $(ECONOMIC_DIR) $(FORECAST_DIR):
 	@mkdir -p $@
 
 # Data directory dependencies
@@ -89,3 +104,4 @@ fetch-extract: $(PDF_DIR) $(EXTRACTED_DIR)
 convert: $(PROCESSED_DIR)
 normalize: $(PROCESSED_DIR)
 economy: $(ECONOMIC_DIR)
+forecast: $(FORECAST_DIR)

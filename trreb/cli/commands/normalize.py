@@ -3,8 +3,9 @@ Normalize command for TRREB data extractor CLI.
 This command handles the normalization of CSV data.
 """
 
-import argparse
+import click
 import pandas as pd
+from pathlib import Path
 from tqdm import tqdm
 
 from trreb.config import PROCESSED_DIR
@@ -13,36 +14,48 @@ from trreb.services.normalizer.validation import generate_validation_report
 from trreb.utils.logging import logger
 
 
-def normalize(args: argparse.Namespace):
-    """
-    CLI command to normalize processed CSV data.
-    Accepts parsed arguments from __main__.py.
-    """
-    # Logger is already set up in __main__.py
-    logger.info(f"Starting normalize command with args: {args}")
-
-    property_type = args.type
+@click.command()
+@click.option(
+    "--type",
+    "property_type",
+    type=click.Choice(["all_home_types", "detached"]),
+    required=True,
+    help="Type of property data to normalize.",
+)
+@click.option(
+    "--validate",
+    is_flag=True,
+    default=False,
+    help="Generate validation report for the normalized data.",
+)
+@click.option(
+    "--date",
+    type=str,
+    help="Specific date to process (YYYY-MM format).",
+)
+def normalize(property_type: str, validate: bool, date: str) -> None:
+    """Normalize processed CSV data into a consistent format."""
+    logger.info(f"Starting normalize command for {property_type}")
 
     # Process the data for normalization
     normalized_path = normalize_type(
         property_type=property_type,
-        validate=args.validate,
-        date=args.date,
+        validate=validate,
+        date=date,
     )
 
-    if normalized_path:
-        logger.success(f"Normalized data saved to {normalized_path}")
-        return 0
-    else:
+    if not normalized_path:
         logger.error("Normalization failed.")
-        return 1
+        raise click.Abort()
+
+    logger.success(f"Normalized data saved to {normalized_path}")
 
 
 def normalize_type(
     property_type: str,
     validate: bool = False,
     date: str = None,
-):
+) -> Path:
     """
     Normalize processed CSVs for a specific property type.
 
@@ -56,7 +69,7 @@ def normalize_type(
     """
     # Find all CSV files matching the property type
     csv_files = []
-    processed_dir = PROCESSED_DIR / property_type
+    processed_dir = Path(PROCESSED_DIR) / property_type
 
     # Get all CSV files for this property type
     for csv_path in processed_dir.glob("*.csv"):
@@ -65,9 +78,8 @@ def normalize_type(
             continue
 
         # If date is specified, filter by it
-        if date:
-            if date not in csv_path.name:
-                continue
+        if date and date not in csv_path.name:
+            continue
 
         csv_files.append(csv_path)
 
@@ -220,11 +232,9 @@ def normalize_type(
         normalized_df = normalized_df[valid_regions]
 
         # Save normalized data
-        normalized_path = PROCESSED_DIR / f"normalized_{property_type}.csv"
+        normalized_path = Path(PROCESSED_DIR) / f"normalized_{property_type}.csv"
         normalized_df.to_csv(normalized_path, index=False)
-        logger.success(f"Normalized data saved to {normalized_path}")
-
         return normalized_path
-    else:
-        logger.error("No valid data to normalize after processing files.")
-        return None
+
+    logger.error("No valid data to normalize after processing files.")
+    return None

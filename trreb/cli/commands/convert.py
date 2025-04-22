@@ -3,7 +3,7 @@ Convert command for TRREB data extractor CLI.
 This command handles the conversion of PDF files to CSV format.
 """
 
-import argparse
+import click
 import pandas as pd
 from tqdm import tqdm
 
@@ -16,31 +16,44 @@ from trreb.utils.paths import (
 )
 
 
-def convert(args: argparse.Namespace):
-    """
-    CLI command to convert extracted PDF pages into CSV format.
-    Accepts parsed arguments from __main__.py.
-    """
-    # Logger is already set up in __main__.py
-    logger.info(f"Starting convert command with args: {args}")
-
-    property_type = args.type
+@click.command()
+@click.option(
+    "--type",
+    "property_type",
+    type=click.Choice(["all_home_types", "detached"]),
+    required=True,
+    help="Type of property data to convert.",
+)
+@click.option(
+    "--date",
+    type=str,
+    help="Specific date to convert (YYYY-MM format).",
+)
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing CSV files.",
+)
+def convert(property_type: str, date: str, overwrite: bool) -> None:
+    """Convert extracted PDF pages into CSV format."""
+    logger.info(f"Starting convert command for {property_type}")
 
     # Get all extracted files
     extracted_files = get_all_extracted_paths(property_type)
 
     # Filter by date if specified
-    if args.date:
-        logger.info(f"Filtering extracted files for date: {args.date}")
+    if date:
+        logger.info(f"Filtering extracted files for date: {date}")
         extracted_files = [
             f
             for f in extracted_files
-            if extract_date_from_filename(f.name) == args.date
+            if extract_date_from_filename(f.name) == date
         ]
 
     if not extracted_files:
         logger.error(f"No extracted files found for property type '{property_type}'.")
-        return 1
+        return
 
     # Process each file
     results = []
@@ -57,7 +70,7 @@ def convert(args: argparse.Namespace):
         _, output_path = get_output_paths(date_str, property_type)
 
         # Process the file
-        success, shape = extractor.process_pdf(pdf_path, output_path, args.overwrite)
+        success, shape = extractor.process_pdf(pdf_path, output_path, overwrite)
 
         # Add to results
         results.append(
@@ -84,13 +97,8 @@ def convert(args: argparse.Namespace):
         f"({successful_files / total_files * 100:.1f}%)"
     )
 
-    return 0
 
-
-def convert_type(
-    property_type: str,
-    overwrite: bool = False,
-):
+def convert_type(property_type: str, overwrite: bool = False) -> list:
     """
     Convert all extracted pages for a specific property type.
 
