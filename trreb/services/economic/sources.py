@@ -9,7 +9,7 @@ WARNING: This version disables SSL verification (verify=False) for HTTPS request
 """
 
 import os
-import json  # <--- Import json library
+import json
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -729,78 +729,22 @@ class StatisticsCanadaEconomic(EconomicDataSource):
         return df
 
 
-class CMHCHousingData(EconomicDataSource):
-    """CMHC housing data source (Placeholder)."""
-
-    def __init__(self):
-        """Initialize the CMHC housing data source."""
-        super().__init__("CMHC Housing Data")
-        logger.warning(
-            "CMHC does not provide a public, easily accessible API for granular housing data (starts, completions)."
-        )
-        logger.warning(
-            "This class is a placeholder. Real data fetching would likely require web scraping or manual data sourcing."
-        )
-
-    def download(self) -> pd.DataFrame:
-        """
-        Download housing data from CMHC (Placeholder).
-        """
-        logger.info(
-            "CMHC data download is not implemented (no public API). Returning empty DataFrame."
-        )
-        cols = [
-            "date",
-            "housing_starts_gta",
-            "housing_completions_gta",
-            "under_construction_gta",
-        ]
-        return pd.DataFrame(columns=cols)
-
-    def preprocess(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Preprocess the CMHC housing data (Placeholder).
-        """
-        logger.warning(
-            "Preprocessing CMHC data, but input DataFrame is expected to be empty."
-        )
-        required_cols = ["year", "month", "date_str"]
-        indicator_cols = [
-            "housing_starts_gta",
-            "housing_completions_gta",
-            "under_construction_gta",
-        ]
-        derived_cols = [
-            "housing_starts_gta_3m_avg",
-            "housing_starts_gta_yoy_change",
-            "housing_completions_gta_yoy_change",
-            "starts_to_completion_ratio",
-        ]
-
-        final_cols = required_cols + indicator_cols + derived_cols
-        empty_processed_df = pd.DataFrame(columns=final_cols)
-
-        # Ensure correct dtypes for the empty DataFrame structure
-        empty_processed_df["year"] = empty_processed_df["year"].astype("Int64")
-        empty_processed_df["month"] = empty_processed_df["month"].astype("Int64")
-        for col in indicator_cols + derived_cols:
-            empty_processed_df[col] = pd.to_numeric(
-                empty_processed_df[col], errors="coerce"
-            ).astype("float64")
-
-        logger.info("Returning empty structured DataFrame for CMHC data.")
-        return empty_processed_df
+# --- CMHCHousingData Class Removed ---
 
 
 # Factory function to get all data sources
 def get_all_data_sources() -> List[EconomicDataSource]:
     """
     Get all available economic data sources.
+
+    Returns:
+        List of economic data sources instances.
     """
+    # Return only the implemented sources
     return [
         BankOfCanadaRates(),
         StatisticsCanadaEconomic(),
-        CMHCHousingData(),
+        # CMHCHousingData removed
     ]
 
 
