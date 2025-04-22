@@ -149,8 +149,8 @@ def create_master_economic_dataset() -> pd.DataFrame:
     economic_data = load_economic_data(force_download=True)  # Force download to get the latest data
 
     if not economic_data:
-        logger.error("No economic data sources loaded")
-        return pd.DataFrame()
+        logger.error("No economic data sources loaded. Please check API implementations.")
+        return pd.DataFrame(columns=["year", "month", "date_str"])
 
     # Start with the first data source
     master_df = next(iter(economic_data.values())).copy()
@@ -214,6 +214,13 @@ def create_master_economic_dataset() -> pd.DataFrame:
         )
         # Keep only the last occurrence of each date_str
         master_df = master_df.drop_duplicates(subset=["date_str"], keep="last")
+    
+    # If master dataset is empty after merging, log a clear error
+    if master_df.empty:
+        logger.error("Master economic dataset is empty! All data sources returned empty datasets.")
+        logger.error("Please check the API implementations in the economic data sources.")
+        # Return a minimal DataFrame with required columns
+        return pd.DataFrame(columns=["year", "month", "date_str"])
 
     # Save the master dataset
     output_path = ECONOMIC_DIR / "master_economic_data.csv"
@@ -279,7 +286,7 @@ def integrate_economic_data(
     # Get pre-prepared economic data (already handled at the beginning of the function)
 
     if econ_df.empty:
-        logger.error("No economic data available")
+        logger.error("No economic data available. Please check data source implementations.")
         return trreb_df
 
     # Create lag features if requested
