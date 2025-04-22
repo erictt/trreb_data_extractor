@@ -11,36 +11,19 @@ authors = [{ name = "Eric", email = "ericyy87@gmail.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
-  "annotated-types",
-  "anyio",
-  "certifi",
-  "distro",
-  "h11",
-  "httpcore",
-  "httpx",
-  "idna",
-  "jiter",
-  "loguru",
-  "numpy",
-  "openai",
-  "pandas",
-  "pdftotext",
-  "pydantic",
-  "pydantic_core",
-  "PyMuPDF",
-  "PyPDF2",
-  "python-dateutil",
-  "python-dotenv",
-  "pytz",
-  "requests",
-  "six",
-  "sniffio",
-  "tabula",
-  "tabula-py",
-  "tqdm",
-  "typing-inspection",
-  "typing_extensions",
-  "tzdata",
+  "stats-can>=2.9.4",
+  "dotenv>=0.9.9",
+  "pdftotext>=3.0.0",
+  "pypdf2>=3.0.1",
+  "openai>=1.75.0",
+  "tabula-py>=2.10.0",
+  "pandas>=2.2.3",
+  "tqdm>=4.67.1",
+  "python-dateutil>=2.9.0.post0",
+  "pytz>=2025.2",
+  "pydantic>=2.11.3",
+  "httpx>=0.28.1",
+  "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
@@ -61,7 +44,7 @@ packages = ["trreb"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py311']
 
 [tool.isort]
 profile = "black"
